@@ -1,0 +1,461 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 380;                                // Set Application width
+   var hta_height = 360;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left,hta_top);                  // it into view.
+   }
+  </script>
+
+  <title>Passwords, .htaccess, local or remote access</title>
+ 
+  <hta:application
+   id="coral1_www_name_password"
+   applicationname="coral1_www_name_password" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 14-4-2011 V1.0
+ Option Explicit
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ document.title = lang_passwords_page_title_www ' Set new page title 
+ 
+ us_init()                     'Check servers have moved and update accordingly
+
+ initial_text()                'Set button and side text from lang file
+ load_display_current_status() 'Load initial values. Displayed to user
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'Set side text from lang file
+'******************************************************************************
+Function initial_text()
+
+  legi_www.InnerHtml                    = lang_passwords_www_legend         'ROOT WWW Folder UniServer\www
+
+  itd_www_name.InnerHtml                = lang_passwords_name_www                'Name:
+  itd_www_password.InnerHtml            = lang_passwords_password_www            'Password:
+
+  bti_www_edit1.value                   = lang_passwords_edit_www_bt             'Edit
+  bti_www_edit2.value                   = lang_passwords_edit_www_bt             'Edit
+  bti_www_change_password.value         = lang_passwords_change_password_www_bt  'Change name password
+  bti_www_reload_values.value           = lang_passwords_reload_www              'Reload values from files
+
+  td_www_password.InnerHtml               = lang_www_password                 'Password:
+  td_www_password_disabled.InnerHtml      = lang_www_password_disabled        'Password Disabled
+  td_www_password_enabled.InnerHtml       = lang_www_password_enabled         'Password Enabled
+  td_www_access.InnerHtml                 = lang_www_access                   'Access:
+  td_www_access_local.InnerHtml           = lang_www_access_local             'Local Access
+  td_www_access_local_intranet.InnerHtml  = lang_www_access_local_intranet    'Local and Intranet Access
+  td_www_access_internet.InnerHtml        = lang_www_access_internet          'Internet Access
+
+  legi_www_state.InnerHtml              = lang_passwords_state_www_legend        'Change State www
+  bti_www_browser.value                 = lang_passwords_test_www_bt             'Test
+
+End Function
+'------------------------------------------------------------------------------
+
+'=== HELP FUNCTIONS ===========================================================
+Function btf_help1()
+  display_html_doc_page("general_access_www.html")
+  bti_help1.blur        'Remove focus and double line
+End Function
+
+Function btf_help2()
+ MsgBox lang_www_passwords_help_str,,lang_www_passwords_help_title
+ bti_help2.blur        'Remove focus and double line
+End Function
+
+'======================================================= END HELP FUNCTIONS ===
+
+
+'=== Display Current status ===================================================
+
+Function load_display_current_status()
+ Dim file_array,split_array,strLine
+
+ '--Get www name/password
+  file_array  = us_get_file_as_array(USF_WWW_PASSWORD) 'Read password file  
+  split_array = Split(file_array(0),":") 'Use first line of name/password list!
+
+  ip_www_name.value     = split_array(0) 'Display name
+  ip_www_password.value = split_array(1) 'Display password
+
+  Erase file_array  ' clear out array
+  Erase split_array ' clear out array
+
+  group1(0).Checked = False                                 'Reset radio
+  group1(1).Checked = False                                 'Reset radio
+
+  group2(0).Checked = False                                 'Reset radio
+  group2(1).Checked = False                                 'Reset radio
+  group2(2).Checked = False                                 'Reset radio
+
+  '-- Get current status from htaccess file
+  file_array  = us_get_file_as_array(USF_WWW_HTACCESS)       'Read htaccess file
+  For Each strLine in file_array                             'Scan array
+
+  '--Name Password
+    If InStr(1,strLine,"AuthName") = 1 Then                  'Is name/password enabled
+      group1(1).Checked = True                               'Password Enabled
+    End If
+    If InStr(1,strLine,"#AuthName") = 1 Then                 'Is name/password disabled
+      group1(0).Checked = True                               'Password Disabled
+    End If
+
+   '---Access
+    If InStr(1,strLine,"Allow from 127.0.0.1") = 1 Then      'Local access
+      group2(0).Checked = True                               'Set radio Local
+    End If
+
+    If InStr(1,strLine,"Allow from 127.0.0.1 192.168.0.0/16 172.16.0.0/12 10.0.0.0/8") = 1 Then 'Is local and Intranet access
+      group2(1).Checked = True                                   'Set radio Local and Intranet
+    End If
+
+    If InStr(1,strLine,"#Allow from 127.0.0.1") = 1 Then     'Is Internet access enabled
+      group2(2).Checked = True                               'Set radio Internet
+    End If
+
+  Next       
+
+  '=== Button status
+  If us_apache_running() Then              ' Apache running
+    bti_www_browser.Disabled      = False  'disable button
+  Else
+    bti_www_browser.Disabled      = True   'disable button
+  End If
+
+End Function
+'=============================================== End Display Current status ===
+
+'=== RELOAD VALUES FROM CONFIG FILES===========================================
+Function btf_www_reload_values()
+  load_display_current_status()   'Get data from config files and display
+  bti_www_reload_values.blur      'Remove focus and double line
+End Function
+'=========================================== RELOAD VALUES FROM CONFIG FILES===
+
+'=== View www password ========================================================
+Function btf_www_edit1()
+  Dim objShell
+  Set objShell = CreateObject("WScript.Shell")
+  objShell.Run("notepad " & USF_WWW_PASSWORD) 'Open file
+  Set objShell = Nothing 
+  bti_www_edit1.blur        'Remove focus and double line
+End Function
+'==================================================== End View www password ===
+
+'=== View www htaccess ========================================================
+Function btf_www_edit2()
+  Dim objShell
+  Set objShell = CreateObject("WScript.Shell")
+  objShell.Run("notepad " & USF_WWW_HTACCESS) 'Open file
+  Set objShell = Nothing 
+ bti_www_edit2.blur        'Remove focus and double line
+End Function
+'==================================================== End View www htaccess ===
+
+'=== Change www name/password =================================================
+Function btf_www_change_password()
+ Dim file_str,file_array,str,strLine
+  If (ip_www_name.value = "") Or (ip_www_password.value = "") Then
+    MsgBox lang_www_htaccess1_str,,lang_www_htaccess1_title  'Error
+    bti_www_change_password.blur                             'Remove focus 
+    Exit Function
+  End If
+
+  file_str = ip_www_name.value & ":" & ip_www_password.value 'Create string
+
+  '--Create new array
+  file_array    = us_get_file_as_array(USF_WWW_PASSWORD) 'Read password file  
+  file_array(0) = file_str                               'Set first name/password pair
+
+  call us_save_array_to_file(file_array,USF_WWW_PASSWORD) 'Save array 
+
+  MsgBox lang_www_htaccess2_str,,lang_www_htaccess2_title    'OK
+  bti_www_change_password.blur                               'Remove focus 
+End Function
+'============================================= End Change www name/password ===
+
+'=== Require password Enable/Disable ==========================================
+Function btf_www_password()
+  Dim file_array,i,str,strLine
+
+  file_array  = us_get_file_as_array(USF_WWW_HTACCESS)       'Read htaccess file  
+
+  '--- Disable password section
+  If group1(0).Checked Then                                  'Disable password section
+    For i = 0 To UBound(file_array)                          'Scan all lines in array
+       If InStr(file_array(i),"AuthName") Then 
+          file_array(i) = "#AuthName " &Chr(34) & "Uniform Server - Server Access" & Chr(34)
+       End If
+       If InStr(file_array(i),"AuthType Basic") Then 
+         file_array(i) = "#AuthType Basic"
+       End If
+       If InStr(file_array(i),"AuthUserFile") Then 
+         file_array(i) = "#AuthUserFile ../../../htpasswd/www/.htpasswd"
+       End If       
+       If InStr(file_array(i),"Require") Then 
+         file_array(i) = "#Require valid-user"
+       End If 
+    Next 
+  End If
+
+  '---Enable password section
+  If group1(1).Checked Then       'Enable password section
+    For i = 0 To UBound(file_array)                          'Scan all lines in array
+       If InStr(file_array(i),"#AuthName") Then 
+          file_array(i) = "AuthName " &Chr(34) & "Uniform Server - Server Access" & Chr(34)
+       End If
+       If InStr(file_array(i),"#AuthType Basic") Then 
+         file_array(i) = "AuthType Basic"
+       End If
+       If InStr(file_array(i),"#AuthUserFile") Then 
+         file_array(i) = "AuthUserFile ../../../htpasswd/www/.htpasswd"
+       End If       
+       If InStr(file_array(i),"#Require") Then 
+         file_array(i) = "Require valid-user"
+       End If 
+    Next 
+  End If
+
+  call us_save_array_to_file(file_array,USF_WWW_HTACCESS) 'Save array 
+
+End Function
+'====================================== End Require password Enable/Disable ===
+
+'=== Server Access ============================================================
+Function  btf_access()
+  Dim file_array,i,str,strLine
+
+  file_array  = us_get_file_as_array(USF_WWW_HTACCESS)      'Read htaccess file 
+
+  '--- Local Access
+   If group2(0).Checked Then                                  'Local Access
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"Order Deny,Allow") Then 
+          file_array(i) = "Order Deny,Allow"
+       End If
+       If InStr(file_array(i),"Deny from all") Then 
+          file_array(i) = "Deny from all"
+       End If
+       If InStr(file_array(i),"Allow from 127.0.0.1") Then 
+          file_array(i) = "Allow from 127.0.0.1"
+       End If
+       If InStr(file_array(i),"Allow from ::1") Then 
+          file_array(i) = "Allow from ::1"
+       End If
+    Next 
+   End If
+
+  '--- Local and Intranet Access
+   If group2(1).Checked Then                                  'Local and Intranet Access
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"Order Deny,Allow") Then 
+          file_array(i) = "Order Deny,Allow"
+       End If
+       If InStr(file_array(i),"Deny from all") Then 
+          file_array(i) = "Deny from all"
+       End If
+       If InStr(file_array(i),"Allow from 127.0.0.1") Then 
+          file_array(i) = "Allow from 127.0.0.1 192.168.0.0/16 172.16.0.0/12 10.0.0.0/8"
+
+       End If
+       If InStr(file_array(i),"Allow from ::1") Then 
+          file_array(i) = "Allow from ::1"
+          Exit For
+       End If
+    Next 
+   End If
+
+  '--- Local, Intranet and Internet Access
+   If group2(2).Checked Then                                  'Local, Intranet and Internet Access
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"Order Deny,Allow") Then 
+          file_array(i) = "#Order Deny,Allow"
+       End If
+       If InStr(file_array(i),"Deny from all") Then 
+          file_array(i) = "#Deny from all"
+       End If
+       If InStr(file_array(i),"Allow from 127.0.0.1") Then 
+          file_array(i) = "#Allow from 127.0.0.1"
+       End If
+       If InStr(file_array(i),"Allow from ::1") Then 
+          file_array(i) = "#Allow from ::1"
+          Exit For
+       End If
+    Next 
+   End If
+
+   call us_save_array_to_file(file_array,USF_WWW_HTACCESS) 'Save array 
+
+End Function
+'======================================================== End Server Access ===
+
+
+
+'=== View root folder www in default browser ==================================
+Function btf_www_browser()
+ us_redirect("www")             'Open Page in browser
+ bti_www_browser.blur           'Remove focus and double line 
+End Function
+'============================== End View root folder www in default browser ===
+
+</script>
+
+<style type="text/css">
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+.pass{
+ font-size:11px;
+ font-family:Verdana;
+ width:97%;
+  height:12px;
+ background-color: #D1D1F5;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+
+
+</style>
+
+</head>
+
+<body>
+
+<table>
+<tr>
+<td>
+<fieldset>
+<legend id="legi_www" >ROOT WWW Folder UniServer\www</legend> 
+
+<table border="0" cellspacing="4">
+  <tr>
+    <td id="itd_www_name">Name: </td>
+    <td><input  id="ip_www_name" type="text" class="pass"> </td>
+  </tr>
+  <tr>
+    <td id="itd_www_password">Password: </td>
+    <td><input  id="ip_www_password" type="text" class="pass"> </td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td><button   id="bti_www_reload_values"  onclick="btf_www_reload_values()" >Reload Values</button></td>
+  </tr>
+  <tr>
+    <td><button   id="bti_www_edit1" onclick="btf_www_edit1()" >Edit</button> </td>
+    <td><button   id="bti_www_change_password" onclick="btf_www_change_password()" >Change name password</button>  </td>
+  </tr>
+</table>
+
+</fieldset>
+</td>
+</tr>
+</table>
+
+
+<table>
+<tr>
+<td>
+
+<fieldset>
+<legend id="legi_www_state" >Change State</legend> 
+ <table border="0" cellspacing="4">
+
+  <tr>
+    <td id="td_www_password" >Password:</td>
+    <td> <input type="radio" name="group1" value="pw_disabled"  onclick="btf_www_password()" ></td>
+    <td id="td_www_password_disabled" >Password Disabled</td>
+  </tr>
+
+  <tr>
+    <td>&nbsp;</td>
+    <td> <input type="radio" name="group1" value="pw_enabled" onclick="btf_www_password()" ></td>
+    <td id="td_www_password_enabled" >Password Enabled</td>
+  </tr>
+
+  <tr>
+    <td colspan="3"><hr /></td>
+   </tr>
+
+  <tr>
+    <td id="td_www_access" >Access:</td>
+    <td> <input type="radio" name="group2" value="acc_local" onclick="btf_access()" ></td>
+    <td id="td_www_access_local">Local Access</td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td> <input type="radio" name="group2" value="acc_local_intranet" onclick="btf_access()" ></td>
+    <td id="td_www_access_local_intranet" >Local and Intranet Access</td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td> <input type="radio" name="group2" value="acc_internet" onclick="btf_access()" ></td>
+    <td id="td_www_access_internet">Internet Access</td>
+  </tr>
+
+  <tr>
+    <td colspan="2"><button style="width:100px"   id="bti_www_edit2" onclick="btf_www_edit2()" >Edit</button> </td>
+    <td width="100%">
+       <button   id="bti_www_browser" onClick="btf_www_browser()" style="width:70%">Test</button>
+       &nbsp;
+       <button   class="bt_help" id="bti_help1"   onclick="btf_help1()" >!</button>
+       &nbsp;
+       <button   class="bt_help" id="bti_help2"   onclick="btf_help2()" >?</button>
+    </td>
+  </tr>
+
+ </table>
+</fieldset>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+ 

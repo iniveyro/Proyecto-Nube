@@ -1,0 +1,209 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 380;                                // Set Application width
+   var hta_height = 360;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left,hta_top);                  // it into view.
+   }
+  </script>
+
+  <title>Apache Modules</title>
+ 
+  <hta:application
+   id="coral1_apache_modules"
+   applicationname="coral1_apache_modules" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="yes"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 2-8-2011 V1.0
+
+ Dim objFSO,objFolder,colFiles,objFile,id,i,j
+ Dim module_file_array(),main_array(),main_length,cnf_array
+ Dim str_line,tmp_array
+
+ us_init()                     'Check servers have moved and update accordingly
+
+ i = 0 
+ '-- Get all module files and add to array
+ Set objFSO = CreateObject("Scripting.FileSystemObject")  'Create file object
+ Set objFolder = objFSO.GetFolder(US_APACHE & "\modules") 'Create object to folder
+
+ Set colFiles = objFolder.Files            'Get list of all files
+ For Each objFile in colFiles              'Scan list of files
+   Redim Preserve module_file_array(i)     'Keep array and add another element
+   module_file_array(i) = objFile.Name     'Read file name save to array
+   i = i + 1                               'Increment array index
+ Next
+ Set objFSO    = Nothing 
+ Set objFolder = Nothing 
+ Set objFolder = Nothing 
+
+ '-- Create main array
+ 'i,0=Enabled/Disabled i,1=Module name i,2=Module file name
+ main_length = UBound(module_file_array)
+ Redim Preserve main_array(main_length,2)  'Create array
+ 
+ '-- Copy file names  to main array
+ For i=0 to main_length
+   main_array(i,2) = module_file_array(i)
+ Next 
+
+ '-- Obtain settings from config file
+ cnf_array = us_get_file_as_array(USF_APACHE_CNF) 'Read file into array 
+
+ For i=0 To UBound(cnf_array)
+  str_line = trim(cnf_array(i))
+  
+  For j=0 To main_length
+    If InStr(str_line,trim(main_array(j,2))) Then 'Cnf line contains module file
+       tmp_array = Split(str_line," ")      'Split line
+
+       main_array(j,1) = tmp_array(1)       'Save Module name
+       If InStr(tmp_array(0),"#") Then      'Not enabled
+         main_array(j,0) = "False"
+       Else
+         main_array(j,0) = "True"           'Enabled
+       End If
+       Exit For
+    End If
+  Next
+
+ Next
+
+
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ document.title = lang_m14_apache ' Set new page title 
+End sub
+
+'=== Change state =============================================================
+Function  Change(selected)
+ If main_array(selected,0) = "True" Then 'Disable module
+   main_array(selected,0) = "False"      'Reset flag
+   disable_module(selected)
+
+ Else                                    'Enable module
+   main_array(selected,0) = "True"       'Set Flag
+   enable_module(selected)
+ End If
+End function
+'========================================================= End Change state ===
+
+'=== Disable module ===========================================================
+Function  disable_module(selected)
+ Dim config_array,str_line,i
+
+ config_array = us_get_file_as_array(USF_APACHE_CNF) 'Read file into array 
+
+ For i=0 To UBound(config_array)                    'Scan array
+   str_line = config_array(i)                       'Read string
+    If InStr(str_line,main_array(selected,2)) Then  'line contains module file
+       config_array(i) = "#" & config_array(i)      'Add # save new line to array
+       Exit For                                     'Nothing else to do
+    End If
+  Next
+
+  call us_save_array_to_file(config_array,USF_APACHE_CNF) 'Save new file
+
+End function
+'======================================================= End Disable module ===
+
+'=== Enable module ============================================================
+Function  enable_module(selected)
+
+ Dim config_array,str_line,i,array_tmp
+
+ config_array = us_get_file_as_array(USF_APACHE_CNF) 'Read file into array 
+
+ For i=0 To UBound(config_array)                    'Scan array
+   str_line = config_array(i)                       'Read string
+    If InStr(str_line,main_array(selected,2)) Then  'line contains module file
+       array_tmp = split(str_line,"#")              'Split line
+       config_array(i) = array_tmp(1)               'Remove # save new line to array
+       Exit For                                     'Nothing else to do
+    End If
+  Next
+
+  call us_save_array_to_file(config_array,USF_APACHE_CNF) 'Save new file
+
+End function
+'======================================================== End Enable module ===
+
+</script>
+
+<style type="text/css">
+
+input{
+ font-size:12px;
+ background-color: #D1D1F5;
+}
+
+td{
+ font-size:12px;
+ background-color: #D1D1F5;
+}
+
+
+</style>
+
+</head>
+
+<body>
+
+<table border="0" cellpadding="0" cellspacing="0">
+
+<script type="text/vbscript">
+'--Write modules to page
+
+For i=0 to main_length
+ cbid = "cb" & i                        'Checkbox name 
+
+ If main_array(i,0) = "True" Then
+    selected = " checked=""checked"""   'Checked
+ Else
+  selected = ""
+ End If
+
+ htmlstr = "<tr><td><input type=""checkbox"" name=""" & cbid & """ onclick=""change('" & i & "')""" & selected & "></td><td>" & main_array(i,1) & "</td><td width=""100%"">" &main_array(i,2) & "</td>"
+ document.write(htmlstr)
+ Next
+</script>
+
+</table>
+
+</body>
+</html>
+ 

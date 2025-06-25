@@ -1,0 +1,560 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 460;                                // Set Application width
+   var hta_height = 490;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',50);             // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left,hta_top);                  // it into view.
+   }
+  </script>
+
+  <title>Server Status</title>
+ 
+  <hta:application
+   id="coral1_server_status"
+   applicationname="coral1_server_status" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="no"
+   singleinstance="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG V1.0 2-5-2011
+'MPG V1.1 23-1-2012
+ Option Explicit
+
+ Dim idTim1,idTim2,idTim3
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ Dim refrtime
+
+ document.title = lang_server_status_page_title & " " & us_get_server_version ' Set new page title
+ us_init()             'Check servers have moved and update accordingly
+ initial_text()        'Set button default text
+ call setTimeout("update_status", 50, "vbscript") 'Allow display then update update_status()
+End sub
+
+'******************************************************************************
+'Set initial text from language configuration file
+'******************************************************************************
+Function initial_text()
+
+  legi_ss_general.InnerHtml   = lang_ss_general 'General Status
+  ssi_general_1a.InnerHtml    = lang_general_1a 'Your Internet IP Address
+  ssi_general_2a.InnerHtml    = lang_general_2a 'Accessible from Internet
+  ssi_general_3a.InnerHtml    = lang_general_3a 'Cron run status
+  ssi_general_4a.InnerHtml    = lang_general_4a 'PHP INI: php.ini file
+  ssi_general_6a.InnerHtml    = lang_general_6a 'New UniServer Version
+
+  legi_ss_apache_server.InnerHtml = lang_ss_apache_server 'Apache Server
+  ssi_apache_1a.InnerHtml         = lang_apache_1a 'Apache port
+  ssi_apache_2a.InnerHtml         = lang_apache_2a 'Apache SSL port
+  ssi_apache_3a.InnerHtml         = lang_apache_3a 'Apache executable name
+  ssi_apache_4a.InnerHtml         = lang_apache_4a 'Apache service name
+  ssi_apache_5a.InnerHtml         = lang_apache_5a 'Apache SSL server
+  ssi_apache_6a.InnerHtml         = lang_apache_6a 'Apache run status
+  ssi_apache_7a.InnerHtml         = lang_apache_7a 'Apache install status
+
+  legi_ss_mysql_server.InnerHtml  = lang_ss_mysql_server 'MySQL Server
+  ssi_mysql_1a.InnerHtml          = lang_mysql_1a 'MySQL port
+  ssi_mysql_2a.InnerHtml          = lang_mysql_2a 'MySQL executable name
+  ssi_mysql_3a.InnerHtml          = lang_mysql_3a 'MySQL service name
+  ssi_mysql_4a.InnerHtml          = lang_mysql_4a 'MySQL run status
+  ssi_mysql_5a.InnerHtml          = lang_mysql_5a 'MySQL install status
+
+  legi_ss_port_status.InnerHtml  = lang_ss_port_status 'Port Status
+  ssi_port_1a.InnerHtml          = lang_port_1a     'Apache port
+  ssi_port_2a.InnerHtml          = lang_port_2a     'Apache SSL port
+  ssi_port_3a.InnerHtml          = lang_port_3a     'MySQL port
+
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+'Update status. Uses real time information
+'******************************************************************************
+Function update_status()
+ Dim ip_address,apache_port,apache_ssl_port,mysql_port
+  apache_port     = us_get_apache_port()
+  apache_ssl_port = us_get_apache_ssl_port()
+  mysql_port      = us_get_mysql_port()
+
+ '---Cron run status
+   If us_get_cron_tracker() = "run" Then
+     ssi_general_3b.InnerHtml = lang_ss_running
+   Else
+     ssi_general_3b.InnerHtml = lang_ss_not_running
+   End If
+
+ '--PHP INI: php.ini file
+   If us_get_php_tracker() = "production" Then
+     ssi_general_4b.InnerHtml = lang_ss_production
+   Else
+     ssi_general_4b.InnerHtml = lang_ss_development
+   End If
+
+ '--Apache port
+   ssi_apache_1b.InnerHtml = apache_port 
+
+ '--Apache SSL port
+   ssi_apache_2b.InnerHtml = apache_ssl_port
+
+ '--Apache executable name
+   ssi_apache_3b.InnerHtml = us_get_apache_exe()
+
+ '--Apache service name
+   ssi_apache_4b.InnerHtml = us_get_apache_service_name()
+
+ '--Apache SSL server
+   If us_ssl_enabled() Then
+     ssi_apache_5b.InnerHtml = lang_ss_enabled
+   Else
+     ssi_apache_5b.InnerHtml = lang_ss_disabled
+   End If
+
+ '--Apache run status
+   If us_apache_running() and not us_get_apache_tracker()="free" Then
+     ssi_apache_6b.InnerHtml = lang_ss_running
+   Else
+     ssi_apache_6b.InnerHtml = lang_ss_not_running 
+   End If
+
+ '--Apache install status
+   If us_is_apache_installed_as_a_service() Then            'Service
+     ssi_apache_7b.InnerHtml = lang_ss_installed_as_service
+   Else                                                     'Program
+     If us_apache_running() Then
+        ssi_apache_7b.InnerHtml = lang_ss_installed_as_program
+     Else
+        ssi_apache_7b.InnerHtml = lang_ss_free_to_install
+     End If 
+   End If
+
+ '--MySQL port
+   ssi_mysql_1b.InnerHtml = mysql_port
+
+ '--MySQL executable name
+   ssi_mysql_2b.InnerHtml = us_get_mysql_exe()
+
+ '--MySQL service name
+   ssi_mysql_3b.InnerHtml = us_get_mysql_service_name()
+
+ '--MySQL run status
+     If us_mysql_running() and not us_get_mysql_tracker()="free" Then
+     ssi_mysql_4b.InnerHtml = lang_ss_running
+   Else
+     ssi_mysql_4b.InnerHtml = lang_ss_not_running 
+   End If 
+
+ '--MySQL install status
+   If us_is_mysql_installed_as_a_service() Then            'Service
+     ssi_mysql_5b.InnerHtml = lang_ss_installed_as_service
+   Else                                                     'Program
+     If us_mysql_running() Then
+        ssi_mysql_5b.InnerHtml = lang_ss_installed_as_program
+     Else
+        ssi_mysql_5b.InnerHtml = lang_ss_free_to_install
+     End If 
+   End If
+
+ '--Apache port
+   ssi_port_1b.InnerHtml = apache_port 
+
+
+   If Not us_port_in_use_ap(apache_port) Then
+     ssi_port_1c.InnerHtml = lang_ss_is_free_to_use
+
+   Else 'In use
+     If us_apache_running() and not us_get_apache_tracker()="free" Then
+       ssi_port_1c.InnerHtml = lang_ss_in_use_by_this_server
+     Else
+       ssi_port_1c.InnerHtml = lang_ss_in_use_by_another_server
+     End If
+   End If
+
+ '--Apache SSL port
+    ssi_port_2b.InnerHtml = apache_ssl_port
+
+   If Not us_port_in_use_ap(apache_ssl_port) Then
+     ssi_port_2c.InnerHtml = lang_ss_is_free_to_use
+   Else 'In use
+     If us_apache_running() and not us_get_apache_tracker()="free" Then
+       ssi_port_2c.InnerHtml = lang_ss_in_use_by_this_server
+     Else
+       ssi_port_2c.InnerHtml = lang_ss_in_use_by_another_server
+     End If
+   End If
+
+ '--MySQL Port
+  ssi_port_3b.InnerHtml = mysql_port
+
+   If Not us_port_in_use_my(mysql_port) Then
+     ssi_port_3c.InnerHtml = lang_ss_is_free_to_use
+   Else 'In use
+     If us_mysql_running() and not us_get_mysql_tracker()="free" Then
+       ssi_port_3c.InnerHtml = lang_ss_in_use_by_this_server
+     Else
+       ssi_port_3c.InnerHtml = lang_ss_in_use_by_another_server
+     End If
+   End If
+
+ '--Get IP address as seen from outside and then run accesible test
+ run_get_ip()
+
+ '--Get Version from main-server
+ run_get_version()
+
+
+End Function
+
+'=== Get IP ===================================================================
+ Function run_get_ip()
+   Dim objShell,ip_address
+
+   '-- Delete temp file
+   us_delete_file(USF_SS_GET_IP_TXT)                    'If file exists delete it
+   do while us_file_exists(USF_SS_GET_IP_TXT)           'Wait until file deleted
+     us_hta_delay("500")                                'Delay ms
+   loop   
+
+   Set objShell = CreateObject("WScript.Shell")         'Create shell
+
+   '=== Run Script get_server_ip_address.php
+   ' USF_PHP_EXE path to PHP exe file
+   ' -c USF_PHP_INI_CLI path to PHP configuration file
+   ' path full path to script
+
+   objShell.Run USF_PHP_EXE & " -c " & USF_PHP_INI_CLI & " " & USF_SS_GET_IP_PHPS,0   'run PHP Script file detached hidden
+
+   do while Not us_file_exists(USF_SS_GET_IP_TXT)       'Wait for file to be created
+     us_hta_delay("500")                                'Delay ms
+   loop 
+
+     ip_address = us_getfile_str(USF_SS_GET_IP_TXT)         'Get content
+
+     If Not ip_address = "Failed" Then                      'IP address found
+       ssi_general_1b.InnerHtml = ip_address                'Display IP address
+       imgi_get_ip.src =  "../images/green.gif"
+       run_access()                                         'Check accessibility
+     Else                                                   'IP Not Found
+       imgi_get_ip.src     =  "../images/red.gif"           'Set images accordingly
+       imgi_run_access.src =  "../images/red.gif"
+     End IF
+
+   Set objShell = Nothing 
+ End Function
+'====================================================== End Get IP Progress ===
+
+'=== Accessible from Internet =================================================
+ Function run_access()
+   Dim objShell,access
+
+   Set objShell = CreateObject("WScript.Shell")         'Create shell
+
+   '-- Delete temp file
+   us_delete_file(USF_SS_GET_IP_TXT)                    'If file exists delete it
+   do while us_file_exists(USF_SS_GET_IP_TXT)           'Wait until file deleted
+     us_hta_delay("500")                                'Delay ms
+   loop  
+
+   '-- Delete temp file
+   us_delete_file(USF_SS_ACCESS_TXT)                    ' If file exists delete it
+   do while us_file_exists(USF_SS_ACCESS_TXT)           'Wait until file deleted
+     us_hta_delay("500")                                'Delay ms
+   loop  
+
+
+   '=== Run Script server_status_access.php
+   ' USF_PHP_EXE path to PHP exe file
+   ' -c USF_PHP_INI_CLI path to PHP configuration file
+   ' path full path to script
+
+   objShell.Run USF_PHP_EXE & " -c " & USF_PHP_INI_CLI & " " & USF_SS_ACCESS_PHPS,0   'run PHP Script file detached hidden
+
+   do while Not us_file_exists(USF_SS_ACCESS_TXT)       'Wait for file to be created
+     us_hta_delay("500")                                'Delay ms
+   loop 
+
+     access = us_getfile_str(USF_SS_ACCESS_TXT)        'Get content
+                                                       'Return value true = success, false = failed
+
+     IF access = "True" Then                           'Check accessibility
+      ssi_general_2b.InnerHtml = lang_ss_yes           'Display Yes
+       imgi_run_access.src =  "../images/green.gif"
+     Else
+       ssi_general_2b.InnerHtml = lang_ss_no           'Display No
+       imgi_run_access.src =  "../images/red.gif"
+     End If
+   Set objShell = Nothing 
+ End Function
+'==================================== End Accessible from Internet progress ===
+
+'=== Get Version ==============================================================
+ Function run_get_version()
+   Dim objShell,version_status
+
+   Set objShell = CreateObject("WScript.Shell")         'Create shell
+
+   '-- Delete temp file
+   us_delete_file(USF_SS_VERSION_TXT)                   ' If file exists delete it
+   do while us_file_exists(USF_SS_VERSION_TXT)          'Wait until file deleted
+     us_hta_delay("500")                                'Delay ms
+   loop 
+
+
+   '=== Run Script get_server_version.php
+   ' USF_PHP_EXE path to PHP exe file
+   ' -c USF_PHP_INI_CLI path to PHP configuration file
+   ' path full path to script
+
+   objShell.Run USF_PHP_EXE & " -c " & USF_PHP_INI_CLI & " " & USF_SS_VERSION_PHPS,0   'run PHP Script file detached hidden
+
+   do while Not us_file_exists(USF_SS_VERSION_TXT)       'Wait for file to be created
+     us_hta_delay("500")                                'Delay ms
+   loop 
+
+
+     version_status = us_getfile_str(USF_SS_VERSION_TXT) 'Get content returns either: version or Failed
+
+     IF version_status = "Failed" Then                   'Check version status
+       ssi_general_6b.InnerHtml = lang_general_6b        'Failed: Display Unavailable
+       imgi_run_version.src =  "../images/red.gif"
+     Else
+
+      If version_status = us_get_server_version() Then   'Versions identical
+          imgi_run_version.src =  "../images/green.gif"
+          ssi_general_6b.InnerHtml = lang_general_6c     'Current
+       Else
+         imgi_run_version.src =  "../images/red.gif"
+         ssi_general_6b.InnerHtml = version_status       'Disply new version
+       End If
+
+     End If
+   Set objShell = Nothing 
+ End Function
+'================================================= End Get Version progress ===
+
+
+</script>
+
+<style type="text/css">
+
+/* Top legend */
+legend{
+  font-size:11px;
+  font-family:Verdana;
+  font-weight:bold;
+  margin-top:5px;
+  width:auto;
+}
+table{
+ width:auto;
+}
+td{
+  padding-left:8px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+
+</style>
+
+</head>
+<body>
+
+<!--#### GENERAL STATUS ####-->
+<fieldset>
+<legend id="legi_ss_general" >General Status</legend>  
+
+<table cellspacing="1" border="0" style="width:100%" >
+
+<tr>
+ <td id="ssi_general_1a">Your Internet IP Address</td>
+ <td>=</td>
+ <td id="ssi_general_1b">##.##.##.##</td>
+<td align="right"><img  id="imgi_get_ip" src="../images/wait16.gif"></td>
+</tr>
+
+<tr>
+ <td id="ssi_general_2a">Accessible from Internet</td>
+ <td>=</td>
+ <td id="ssi_general_2b">***</td>
+<td align="right" ><img  id="imgi_run_access" src="../images/wait16.gif"></td>
+</tr>
+
+<tr>
+ <td id="ssi_general_6a">New UniServer Version</td>
+ <td>=</td>
+ <td id="ssi_general_6b">***</td>
+<td align="right" ><img  id="imgi_run_version" src="../images/wait16.gif"></td>
+</tr>
+
+
+<tr>
+ <td id="ssi_general_3a">Cron run status</td>
+ <td>=</td>
+ <td id="ssi_general_3b">***</td>
+ <td >&nbsp</td>
+</tr>
+
+<tr>
+ <td id="ssi_general_4a">PHP INI: php.ini file</td>
+ <td>=</td>
+ <td id="ssi_general_4b">***</td>
+ <td>&nbsp</td>
+</tr>
+
+</table>
+</fieldset>
+
+<!--#### APACHE SERVER ####-->
+<fieldset>
+<legend id="legi_ss_apache_server" >Apache Server</legend>  
+
+<table cellspacing="1" border="0">
+
+<tr>
+ <td id="ssi_apache_1a">Apache port</td>
+ <td>=</td>
+ <td id="ssi_apache_1b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_apache_2a">Apache SSL port</td>
+ <td>=</td>
+ <td id="ssi_apache_2b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_apache_3a">Apache executable name</td>
+ <td>=</td>
+ <td id="ssi_apache_3b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_apache_4a">Apache service name</td>
+ <td>=</td>
+ <td id="ssi_apache_4b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_apache_5a">Apache SSL server</td>
+ <td>=</td>
+ <td id="ssi_apache_5b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_apache_6a">Apache run status</td>
+ <td>=</td>
+ <td id="ssi_apache_6b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_apache_7a">Apache install status</td>
+ <td>=</td>
+ <td id="ssi_apache_7b">***</td>
+</tr>
+
+</table>
+</fieldset>
+
+
+<!--#### MySQL SERVER ####-->
+<fieldset>
+<legend id="legi_ss_mysql_server" >MySQL Server</legend>  
+
+<table   cellspacing="1" border="0">
+
+<tr>
+ <td id="ssi_mysql_1a">MySQL port</td>
+ <td>=</td>
+ <td id="ssi_mysql_1b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_mysql_2a">MySQL executable name</td>
+ <td>=</td>
+ <td id="ssi_mysql_2b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_mysql_3a">MySQL service name</td>
+ <td>=</td>
+ <td id="ssi_mysql_3b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_mysql_4a">MySQL run status</td>
+ <td>=</td>
+ <td id="ssi_mysql_4b">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_mysql_5a">MySQL run status</td>
+ <td>=</td>
+ <td id="ssi_mysql_5b">***</td>
+</tr>
+
+</table>
+</fieldset>
+
+<!--#### PORT STATUS ####-->
+<fieldset>
+<legend id="legi_ss_port_status" >Port Status</legend>  
+
+<table   cellspacing="1" border="0">
+
+<tr>
+ <td id="ssi_port_1a">Apache port</td>
+ <td>=</td>
+ <td id="ssi_port_1b">***</td>
+ <td id="ssi_port_1c">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_port_2a">Apache SSL port</td>
+ <td>=</td>
+ <td id="ssi_port_2b">***</td>
+ <td id="ssi_port_2c">***</td>
+</tr>
+
+<tr>
+ <td id="ssi_port_3a">MySQL port</td>
+ <td>=</td>
+ <td id="ssi_port_3b">***</td>
+ <td id="ssi_port_3c">***</td>
+</tr>
+
+</table>
+</fieldset>
+
+ </body>
+</html>
+ 

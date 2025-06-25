@@ -1,0 +1,112 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>Untitled Document</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'Globals
+Dim old_apache_port,old_apache_ssl_port,old_mysql_port
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ us_init()             'Check servers have moved and update accordingly
+
+ '--Set legend text
+ legi_pear.InnerHtml       = lang_pear_leg             'Pear Control
+
+ '--Set button text
+ bt_pear_install.value     = lang_pear_install_bt      'Install Pear
+ bt_pear_frondend.value    = lang_pear_frontend_bt     'View Pear Front-end
+
+ bt_pear_install.Disabled   = True            'Disable button
+ bt_pear_frondend.Disabled  = True            'Disable button
+
+ If us_apache_running() Then               'Enable buttons only when Apache running
+   If us_file_exists(USF_PEAR_CONF) Then   'Has Pear been installed
+     bt_pear_frondend.Disabled  = False    'Yes: Enable front-end access
+   Else
+     bt_pear_install.Disabled   = False    'No: Enable install
+   End If
+ End If
+
+End sub
+'------------------------------------------------------------------------------
+
+'=== Install Pear =============================================================
+
+Function btf_pear_install()
+  us_redirect("pear_install") 'Run Install page in browser
+  bt_pear_install.blur        'Remove focus and double line 
+End Function
+'========================================================= End Install Pear ===
+
+'=== View Pear Front-end =======================================================
+
+Function btf_pear_frondend()
+  us_redirect("pear_front_end") 'View front-end in browser 
+  bt_pear_frondend.blur         'Remove focus and double line 
+End Function
+'================================================== End View Pear Front-end ===
+
+
+'=== Help1 Pear ===============================================================
+Function btf_help1()
+ display_html_doc_page("php_pear.html")
+ bti_help1.blur                           'Remove focus
+End Function
+'=========================================================== End Help1 Pear ===
+
+'=== Help2 Pear ===============================================================
+Function btf_help2()
+ display_html_doc_page("php_pear.html")
+ bti_help2.blur                           'Remove focus
+End Function
+'=========================================================== End Help2 Pear ===
+
+</script>
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<style type="text/css">
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:100px;
+ background-color: #D1D1F5;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<fieldset>
+<legend id="legi_pear" >Pear Control</legend> 
+
+<table cellspacing="4" border="0" >
+ <tr>
+   <td><button   id="bt_pear_install"  onclick="btf_pear_install()" >Install Pear</button></td>
+   <td><button   class="bt_help" id="bti_help1"   onclick="btf_help1()" >!</button></td>
+ </tr>
+
+ <tr>
+   <td><button   id="bt_pear_frondend"  onclick="btf_pear_frondend()" >View Pear Front-end</button></td>
+   <td><button   class="bt_help" id="bti_help2"   onclick="btf_help2()" >!</button></td> 
+ </tr>
+
+</table>
+
+</fieldset>
+
+
+</body>
+</html>

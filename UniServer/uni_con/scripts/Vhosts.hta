@@ -1,0 +1,1265 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 600;                                // Set Application width
+   var hta_height = 465;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left+10,hta_top+10);            // it into view.
+   }
+  </script>
+
+  <title>Vhosts</title>
+ 
+  <hta:application
+   id="coral1_apache_virtual_hosts"
+   applicationname="apache_virtual_hosts" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 1-2-2012 V1.1
+ Option Explicit
+
+ Dim default          'Default host true or flase
+ Dim vhost_array      'Content of host file
+ Dim vhost_array_end  'Last element index in array
+ Dim block_start      'Start of selected Vhost block
+ Dim block_end        'End of selected Vhost block
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+  document.title = lang_av_apache_virtual_hosts_title ' Set new page title 
+
+ us_init()                     'Check servers have moved and update accordingly
+ initial_text()                'Set button and side text from lang file
+ initial_settings()            'Set initial values displayed
+ populate_select_box()         'Read Vhosts from config file and display
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'******************************************************************************
+Function initial_text()
+  Dim track,file_array,strLine
+
+  legi_vhost_setup.InnerHtml       = lang_av_virtual_host_setup_frame  'Virtual Host Setup
+  legi_list_of_hosts.InnerHtml     = lang_av_list_of_hosts_frame       'List of Hosts
+
+  itd_port.InnerHtml               = lang_av_port_td                   'Port
+  itd_server_admin.InnerHtml       = lang_av_server_admin_td           'Server Admin
+  itd_document_root.InnerHtml      = lang_av_document_root_td          'Document Root
+  itd_server_name.InnerHtml        = lang_av_server_name_td            'Server Name
+  itd_server_alias.InnerHtml       = lang_av_server_alias_td           'Server Alias
+  itd_error_log.InnerHtml          = lang_av_error_log_td              'Error Log
+  itd_custom_log.InnerHtml         = lang_av_custom_log_td             'Custom Log
+  itd_additions.InnerHtml          = lang_av_additions_td              'Additions
+  itd_vhost_help.InnerHtml         = lang_av_vhost_help_td             'Help Vhost 
+
+  bti_delete_admin.value           = lang_av_delete_bt                 'delete
+  bti_delete_alias.value           = lang_av_delete_bt                 'delete
+  bti_delete_error_log.value       = lang_av_delete_bt                 'delete
+  bti_delete_custom_log.value      = lang_av_delete_bt                 'delete
+
+  bti_update_vhost.value           = lang_av_update_vhost_bt           'Update Vhost
+  bti_create_vhost.value           = lang_av_create_vhost_bt           'Create Vhost
+  bti_setup_cancel.value           = lang_av_cancel_bt                 'Cancel
+
+  bti_select_folder.value          = lang_av_select_folder_bt          'Select Folder
+  bti_confirm_name.value           = lang_av_confirm_name_bt           'Confirm
+
+  bti_delete_vhost.value           = lang_av_delete_vhost_bt           'Delete Vhost
+  bti_view_in_browser.value        = lang_av_view_in_browser_bt        'View In Browser
+  bti_list_cancel.value            = lang_av_cancel2_bt                'Cancel
+
+End Function
+'------------------------------------------------------------------------------
+
+'=== Set initial settings =====================================================
+'Used by onload and cancel buttons
+
+Function initial_settings()
+
+  default = False 'Track selected Vhost
+
+  '--Set button status
+  bti_update_vhost.Disabled        = True   'disable button
+  bti_create_vhost.Disabled        = True   'disable button
+  bti_setup_cancel.Disabled        = True   'disable button
+  bti_delete_vhost.Disabled        = True   'disable button
+  bti_view_in_browser.Disabled     = True   'disable button
+  bti_list_cancel.Disabled         = True   'disable button
+
+  bti_delete_admin.Disabled        = True   'disable button
+  bti_confirm_name.Disabled        = False  'enable confirm button
+  bti_delete_alias.Disabled        = True   'disable button
+  bti_delete_error_log.Disabled    = True   'disable button
+  bti_delete_custom_log.Disabled   = True   'disable button
+
+  '--Set default port. Assume main server listening port
+  ip_port.value = us_get_apache_port()
+
+  '--Set input text box status
+  ip_document_root.value =  US_VHOSTS & "\***"  'Display recommended path
+  ip_server_name.focus()               'Focus on server name text input box
+
+  ip_server_admin.value   = ""
+  ip_server_name.value    = ""
+  ip_server_alias.value   = ""
+  ip_error_log.value      = ""
+  ip_custom_log.value     = ""
+  id_ta_additional.value  = ""
+
+End Function
+'================================================= End Set initial settings ===
+
+'=== Set defaults =============================================================
+'Enable buttons and set defaults based on server name
+
+Function set_defaults()
+
+  '--Set button status
+  bti_update_vhost.Disabled        = False   'enable button
+  bti_create_vhost.Disabled        = False   'enable button
+  bti_setup_cancel.Disabled        = False   'enable button
+  bti_delete_vhost.Disabled        = False   'enable button
+  bti_view_in_browser.Disabled     = False   'enable button
+  bti_list_cancel.Disabled         = False   'enable button
+
+  bti_delete_admin.Disabled        = False   'enable button
+  bti_delete_alias.Disabled        = False   'enable button
+  bti_delete_error_log.Disabled    = False   'enable button
+  bti_delete_custom_log.Disabled   = False   'enable button
+
+  bti_update_vhost.Disabled        = True   'disable button
+
+  bti_delete_vhost.Disabled        = True   'disable button
+  bti_view_in_browser.Disabled     = True   'disable button
+  bti_list_cancel.Disabled         = True   'disable button
+
+
+End Function
+'========================================================= End Set defaults ===
+
+'=== Populate Select Box ======================================================
+'Read Vhost from configuration file
+Function populate_select_box()
+  Dim vhost_str,line,str,pos
+
+ select_vhost.options.length=0                             'Clear all items in select box
+
+ vhost_array = us_get_file_as_array(USF_APACHE_VHOST_CNF)  'Returns file as an array line-by-line
+ vhost_array_end = UBound(vhost_array)
+
+ For each line in vhost_array                       'Scan array
+   line = trim(line)                                'Remove spaces
+   If InStr(line,"ServerName") = 1 Then             'String found at start of line
+     line = Replace(line,"ServerName","")           'Remove search string
+     line = trim(line)                              'Remove spaces
+    call us_select_add_item(select_vhost,line,line) 'Add item to select box
+   End If
+ Next
+
+End Function
+'================================================== End Populate Select Box ===
+
+'=== Update Config File =======================================================
+'Gets Vhost ports. Removes duplicates using a Dictionary
+'Updates Listen  *: Vhost directives
+
+Function update_config_file()
+  Dim myDict,line,tmp,found,ports_array,main_listen_port,port_str
+  Dim us_start,us_end,array_end,i,objFSO,objFile
+  Const ForWriting = 2
+
+  Set myDict = CreateObject("Scripting.Dictionary") 'Create dictionary
+  vhost_array = us_get_file_as_array(USF_APACHE_VHOST_CNF)  'Returns file as an array line-by-line
+  array_end  = UBound(vhost_array)                  'End of array
+
+  For each line in vhost_array                      'Scan configuration array
+      found = False                                 'Reset flag
+      If InStr(line,"<VirtualHost") = 1 Then        'Start of block found process
+        tmp = replace(line,"<VirtualHost","")       'Remove string
+        tmp = replace(tmp,">","")                   'Remove end marker
+        tmp = trim(tmp)                             'Remove spaces
+      
+        If Instr(tmp,"*:") Then                     'Not default host
+         tmp = replace(tmp,"*:","")                 'Remove string
+         found=true                                 'Set flag
+        End If
+
+        If Instr(tmp,"_default_:") Then             'Default host
+         tmp = replace(tmp,"_default_:","")         'Remove string
+         found=true                                 'Set flag
+        End If
+
+        If found Then                               'Process found port
+          If ( not myDict.Exists(tmp) ) Then        'Does not exist in dictionary
+            myDict.Add tmp, tmp                     'add key and value
+          End If
+        End if 
+     End If 
+  Next                                              'Next line
+
+  ports_array =  myDict.Keys                        'Save keys to array
+
+  '--Create Listen and NameVirtualHost string
+  port_str = "" 
+  main_listen_port = us_get_apache_port()
+
+  '-Create Listen port list
+  for each line in ports_array                                  'Build list
+    If Not line=main_listen_port Then                           'Donot include main
+      port_str = port_str & "Listen " & line & vbCRLF
+    End If
+  next
+
+  '=== Add list to array
+  '--Get block markers
+  For i=0 to array_end 
+    If InStr(vhost_array(i),"#--US_START") Then
+      us_start = i                              'Start of block
+    End If
+    If InStr(vhost_array(i),"#--US_END") Then
+      us_end = i                                'End of Block
+    End If
+  Next
+
+  Set objFSO = CreateObject ("Scripting.FileSystemObject")  'Create obj
+
+  '== Write new block to config file 
+  Set objFile = objFSO.OpenTextFile(USF_APACHE_VHOST_CNF, ForWriting)
+
+  '-Write top of array
+  For i=0 to us_start
+    objFile.WriteLine(vhost_array(i))
+  Next
+
+  '-Write new block
+   objFile.Write(port_str)
+
+  '-Write bottom of array
+  For i=us_end to array_end
+    objFile.WriteLine(vhost_array(i))
+  Next
+
+  objFile.Close                  'Close file
+  Set objFSO  = Nothing          'Remove obj
+  Set objFile = Nothing 
+  Set myDict  = Nothing 
+
+End Function
+'======================================================= Update Config File ===
+
+'=== Check enable Vhost =======================================================
+'Checks if Vhost enabled. If not enable it
+'Called when new host created or Vhost Updated
+
+Function check_enable_vhost()
+ If us_get_vhost_tracker() = "disabled" Then
+  us_enable_vhost()
+  us_set_vhost_tracker("enabled")
+ End If
+End Function
+'=================================================== END Check enable Vhost ===
+
+'=== Check disable Vhost ======================================================
+'Checks if Vhost disabled. If not disable it
+'Called when last host removed
+
+Function check_disable_vhost()
+ If us_get_vhost_tracker() = "enabled" Then
+   us_disable_vhost()
+   us_set_vhost_tracker("disabled")
+ End If
+End Function
+'================================================= END Check disabled Vhost ===
+
+'=== Update Vhost =============================================================
+'Updates a selected Vhost. Creates a new configuration file. Modified Vhost
+'replaces the existing Vhost in this file. 
+
+Function btf_update_vhost()
+
+  Dim objFSO, objFolder,objFile,i,str
+  Dim root_folder
+  Const ForWriting = 2
+
+  Set objFSO = CreateObject ("Scripting.FileSystemObject")  'Create obj
+
+  '--Create root folder
+  us_create_folder(ip_document_root.value)
+
+  '== Write new config file includes modified Vhost block
+  Set objFile = objFSO.OpenTextFile(USF_APACHE_VHOST_CNF, ForWriting)
+
+  '-Write top of array
+  For i=0 to (block_start - 1)
+    objFile.WriteLine(vhost_array(i))
+  Next
+
+
+  '--Port
+  If ip_port.value = "" Then
+    str = "<VirtualHost *:" & us_get_apache_port() & ">"  'Use main server port
+  Else
+    If default Then                                       'The Vhost port may have changed
+     str = "<VirtualHost _default_:" & ip_port.value & ">"
+
+     //Need to update main config to new port default value
+     call us_general_change_port(USF_APACHE_CNF,us_get_apache_port(),ip_port.value)
+
+    Else                                                  'Not the default Vhost
+     str = "<VirtualHost *:" & ip_port.value & ">"
+    End If
+  End If
+  objFile.WriteLine(str)                                  'Add line to file
+
+  '--Server Admin
+  If Not ip_server_admin.value = "" Then 
+   str = "  ServerAdmin "  & ip_server_admin.value
+   objFile.WriteLine(str)                                 'Add line to file
+  End If
+
+  '--Document Root
+  root_folder = Replace(ip_document_root.value,"\","/")
+  str = "  DocumentRoot "  & root_folder
+  objFile.WriteLine(str)                                 'Add line to file
+
+  '--Server Name
+  str = "  ServerName "  & ip_server_name.value
+  objFile.WriteLine(str)                                 'Add line to file
+
+  '--Server Alias
+  If Not ip_server_alias.value = "" Then 
+   str = "  ServerAlias "  & ip_server_alias.value
+   objFile.WriteLine(str)                                'Add line to file
+  End If
+
+  '--Error Log
+  If Not ip_error_log.value = "" Then 
+   str = "  ErrorLog "  & ip_error_log.value
+   objFile.WriteLine(str)                                'Add line to file
+  End If
+
+  '--Custom Log
+  If Not ip_custom_log.value = "" Then 
+   str = "  CustomLog "  & ip_custom_log.value
+   objFile.WriteLine(str)                                'Add line to file
+  End If
+
+
+
+  '--Additional 
+  If Not id_ta_additional.value = "" Then 
+   str = id_ta_additional.value
+   objFile.WriteLine(str)                                'Add line to file
+  End If
+
+  '--Terminate Vhost Block
+  str = "</VirtualHost>"
+  objFile.WriteLine(str)                                'Add line to file
+
+  '== Write bottom of array
+  If Not vhost_array_end = block_end Then
+    For i= (block_end+1) to vhost_array_end
+      objFile.WriteLine(vhost_array(i))
+    Next
+  End If
+  objFile.Close                                         'Close file
+
+  Set objFSO  = Nothing      'Remove obj
+  Set objFile = Nothing 
+
+  initial_settings()        'Set initial settings
+  update_config_file()      'Updates Listen  *: Vhost directives
+  populate_select_box()     'Update list box
+  check_enable_vhost()      'If not enabled enable in main config file
+
+  '--Ensure the main Listen port is removed from Vhost file
+  us_remove_main_listen_port()
+
+  Msgbox lang_av_popup_str13,,lang_av_popup_title13 'Restart Apache
+  bti_update_vhost.blur
+End Function
+'========================================================= End Update Vhost ===
+
+'=== Create Vhost =============================================================
+Function btf_create_vhost()
+  Dim	str,fso,fp,root_folder
+  Const	OPEN_FILE_APPENDING = 8
+
+  '--Create root folder
+  us_create_folder(ip_document_root.value)
+
+  '--Build Vhost String
+  str = vbCRLF 
+  '--Port
+  If ip_port.value = "" Then
+    str = str & "<VirtualHost *:" & us_get_apache_port() & ">" & vbCRLF    'Use main server
+  Else
+    str = str & "<VirtualHost *:" & ip_port.value & ">" & vbCRLF
+  End If
+
+  '--Server Admin
+  If Not ip_server_admin.value = "" Then 
+   str = str & "  ServerAdmin "  & ip_server_admin.value & vbCRLF
+  End If
+
+  '--Document Root
+  root_folder = Replace(ip_document_root.value,"\","/")
+  str = str & "  DocumentRoot "  & root_folder & vbCRLF
+
+  '--Server Name
+  str = str & "  ServerName "  & ip_server_name.value & vbCRLF
+
+  '--Server Alias
+  If Not ip_server_alias.value = "" Then 
+   str = str & "  ServerAlias "  & ip_server_alias.value & vbCRLF
+  End If
+
+  '--Error Log
+  If Not ip_error_log.value = "" Then 
+   str = str & "  ErrorLog "  & ip_error_log.value & vbCRLF
+  End If
+
+  '--Custom Log
+  If Not ip_custom_log.value = "" Then 
+   str = str & "  CustomLog "  & ip_custom_log.value & vbCRLF
+  End If
+
+  '--Additional 
+  If Not id_ta_additional.value = "" Then 
+   str = str & id_ta_additional.value & vbCRLF
+  End If
+
+  '--Terminate Vhost Block
+   str = str & "</VirtualHost>"
+
+  '--Append to config file
+  Set fso = CreateObject("Scripting.FileSystemObject")
+ 
+  Set fp = fso.OpenTextFile(USF_APACHE_VHOST_CNF, OPEN_FILE_APPENDING, TRUE) 'Open file for append 
+  fp.WriteLine(str)
+  fp.Close
+ 
+  Set fso = Nothing 'Remove
+  Set fp  = Nothing 
+
+  '--Update hosts file
+  us_host_append(ip_server_name.value) 'Add to hosts file if not exists
+
+  '--Set initial setting
+  initial_settings()
+
+  '--Copy .htaccess and favicon.ico files to root folder
+   Set fso = CreateObject("Scripting.FileSystemObject")
+    fso.CopyFile US_UNI_CON &  "\includes\.htaccess", root_folder & "\",true
+    fso.CopyFile US_UNI_CON &  "\includes\favicon.ico", root_folder & "\",true
+   Set fso = Nothing
+
+  '--Update list box
+  update_config_file()      'Updates Listen and *: Vhost directives
+  populate_select_box()
+  check_enable_vhost()      'If not enabled enable in main config file
+
+  '--Ensure the main Listen port is removed from Vhost file
+  us_remove_main_listen_port()
+
+  Msgbox lang_av_popup_str13,,lang_av_popup_title13 'Restart Apache
+  bti_create_vhost.blur
+End Function
+'========================================================= End Create Vhost ===
+
+'=== Cancel_1 =================================================================
+Function btf_setup_cancel()
+  select_vhost.selectedIndex = -1   'Select none
+  initial_settings()
+
+  bti_setup_cancel.blur
+End Function
+'============================================================= End Cancel_1 ===
+
+'=== Cancel_2 =================================================================
+Function btf_list_cancel()
+  select_vhost.selectedIndex = -1   'Select none
+  initial_settings()
+
+  bti_list_cancel.blur
+End Function
+'============================================================= End Cancel_2 ===
+
+
+'=== Confirm Button ===========================================================
+Function btf_confirm_name()
+ Dim temp,name,name1,name2,name_array,str
+
+  bti_confirm_name.blur
+  if InStr(ip_document_root.value,"***") Then         'Has user set root folder
+    MsgBox lang_av_popup_str9,,lang_av_popup_title9   'no display error
+    Exit Function
+  End If
+
+  if ip_server_name.value     = ""  Then              'Has user entered server name
+    MsgBox lang_av_popup_str10,,lang_av_popup_title10 'no display error
+    Exit Function
+  End If
+
+  '--Does VHost exist
+  temp = us_getfile_str(USF_APACHE_VHOST_CNF)         'Get file content as a string
+  If InStr(temp,ip_server_name.value) Then            'Does Vhost aready exist
+    MsgBox lang_av_popup_str11,,lang_av_popup_title11 'yes display error
+    Exit Function
+  End If
+
+  ip_server_admin.value = "webmaster@" & ip_server_name.value 'Set Admin
+
+  '--Alias
+  If InStr(ip_server_name.value,".") Then             'If a . assume contains a tld
+    name_array = split(ip_server_name.value,".")      'Create array
+    name1 = name_array(Ubound(name_array)-1)          'Get name part
+    name2 = name_array(Ubound(name_array))            'Get tld
+
+    If InStr(ip_server_name.value,"www.") Then   
+      ip_server_alias.value = name1 & "." & name2 & " *." & name1 & "." & name2
+    Else
+      ip_server_alias.value = "www." & name1 & "." & name2 & " " & " *." & name1 & "." & name2
+    End If
+  Else
+      ip_server_alias.value = "" 'Name is specific hence no Alias 
+      ip_server_admin.value = "" 'No admin e-mail 
+  End If
+
+  '--Logs
+  ip_error_log.value  = "logs/" & ip_server_name.value & "-error.log"
+  ip_custom_log.value = "logs/" & ip_server_name.value & "-access.log"  & " common"
+
+  '--Additional
+  str = "" 
+  str = str & "<Directory """ & ip_document_root.value & """>" & vbCRLF
+  str = str & "  Options Indexes Includes" & vbCRLF
+  str = str & "  AllowOverride All" & vbCRLF
+  str = str & "  Require all granted" & vbCRLF
+  str = str & "</Directory>"
+
+  id_ta_additional.value = str
+
+  set_defaults()                    'Enable buttons
+  select_vhost.selectedIndex = -1   'Select none
+
+End Function
+'======================================================= End Confirm Button ===
+
+'=== VHOST selected ===========================================================
+Function fsel_select_vhost()
+  Dim i,vhost_str,line,str,pos
+  Dim host_match,tmp,additional
+
+  block_start = 0    'Start of  a Vhost block
+  block_end   = 0    'End of a Vhost block
+  host_match = False 'Selected Vhost found
+  additional = False 'Is additional directives
+
+ '--Get array indexes for a selected Vhost block
+ For i = 0 To UBound(vhost_array)                                     'Scan array
+    If  InStr(vhost_array(i),"<VirtualHost") = 1 Then                 'Is start of block
+       block_start = i                                                'Yes: set index
+    End If
+
+    If  InStr(vhost_array(i),"</VirtualHost") = 1 And host_match Then 'Is end of block
+       block_end = i                                                  'Yes: set index
+       Exit For                                                       'Found block hence exit
+    End If
+
+    If  InStr(vhost_array(i),select_vhost.value) Then                 'Is selected Vhost found
+      host_match = True                                               'Yes: set flag
+    End If
+ Next
+
+ '--Set button status
+ bti_update_vhost.Disabled        = False            'enable update button
+ bti_create_vhost.Disabled        = True             'disable create button
+ bti_setup_cancel.Disabled        = True             'disable cancel button
+
+ If Instr(vhost_array(block_start),"default") Then     'Is default
+   bti_delete_vhost.Disabled        = True             'disable delete button
+ Else
+   bti_delete_vhost.Disabled        = False            'enable delete button
+ End If
+
+ If us_apache_running() Then                  'Enable button 
+   bti_view_in_browser.Disabled     = False   'enable display in browser button
+ Else
+   bti_view_in_browser.Disabled     = True   'disble display in browser button
+ End If 
+
+ bti_list_cancel.Disabled         = False   'enable cancel button
+
+ bti_delete_admin.Disabled        = False   'enable button
+ bti_confirm_name.Disabled        = True    'disable confirm button
+ bti_delete_alias.Disabled        = False   'enable button
+ bti_delete_error_log.Disabled    = False   'enable button
+ bti_delete_custom_log.Disabled   = False   'enable button
+
+ '-- Update text boxes
+ '-- Delete content
+  ip_document_root.value  = ""
+  ip_server_admin.value   = ""
+  ip_server_name.value    = ""
+  ip_server_alias.value   = ""
+  ip_error_log.value      = ""
+  ip_custom_log.value     = ""
+  id_ta_additional.value  = ""
+
+  '-Scan Vhost array block and display Vhost content
+   str =""                                     'str for additional content
+   For i=block_start To block_end              'Scan array
+     additional = True                         'Assume line is additional directive
+     tmp = trim(vhost_array(i))                'Remove spaces
+
+      If InStr(tmp,"<VirtualHost") Then        'Start of block
+        tmp = replace(tmp,"<VirtualHost","")
+        tmp = replace(tmp,">","")
+        tmp = trim(tmp)
+        additional = False                     'Not additional directive
+        
+        If Instr(tmp,"*:") Then                'Not default host
+         tmp = replace(tmp,"*:","")
+         default = False 
+         ip_port.value = tmp
+        End If
+
+        If Instr(tmp,"_default_:") Then        'Default host
+         tmp = replace(tmp,"_default_:","")
+         default = True 
+         ip_port.value = tmp
+        End If
+      End If 
+
+
+      If InStr(tmp,"ServerAdmin") Then
+        tmp = replace(tmp,"ServerAdmin","")
+        tmp = trim(tmp)
+        ip_server_admin.value = tmp
+        additional = False                     'Not additional directive
+      End If 
+
+      If InStr(tmp,"DocumentRoot") Then
+        tmp = replace(tmp,"DocumentRoot","")
+        tmp = trim(tmp)
+        ip_document_root.value = tmp
+        additional = False                     'Not additional directive
+      End If 
+
+      If InStr(tmp,"ServerName") Then
+        tmp = replace(tmp,"ServerName","")
+        tmp = trim(tmp)
+        ip_server_name.value = tmp
+        additional = False                     'Not additional directive
+      End If 
+
+      If InStr(tmp,"ServerAlias") Then
+        tmp = replace(tmp,"ServerAlias","")
+        tmp = trim(tmp)
+        ip_server_alias.value = tmp
+        additional = False                     'Not additional directive
+      End If
+
+      If InStr(tmp,"ErrorLog") Then
+        tmp = replace(tmp,"ErrorLog","")
+        tmp = trim(tmp)
+        ip_error_log.value = tmp
+        additional = False                     'Not additional directive
+      End If
+
+      If InStr(tmp,"CustomLog") Then
+        tmp = replace(tmp,"CustomLog","")
+        tmp = trim(tmp)
+        ip_custom_log.value = tmp
+        additional = False                     'Not additional directive
+      End If
+
+      If InStr(tmp,"VirtualHost") Then         'Is Vhost block
+         additional = False                    'Not additional directive
+      End If
+
+      If additional Then 'None of the above hence
+        str = str & vhost_array(i) & vbCRLF
+      End If
+   Next
+   id_ta_additional.value = str 'Display additional directives      
+
+End Function
+'======================================================= End VHOST selected ===
+
+'=== Delete VHOST =============================================================
+Function btf_delete_vhost()
+  Dim objFSO, objFolder,objFile, i
+  Const ForWriting = 2
+
+  Set objFSO = CreateObject ("Scripting.FileSystemObject")  'Create obj
+
+  '-- Check root folder exists. If exists ask user if they want to delete it 
+  If objFSO.FolderExists(ip_document_root.value) Then       'Check folder exist
+    If MsgBox(lang_av_popup_str12 & vbCRLF & ip_document_root.value ,4,lang_av_popup_title12) = vbYes Then
+      objFSO.DeleteFolder ip_document_root.value, True      'Delete root folder
+    End If
+  End If
+
+  '--Write new config file excluding selected Vhost block
+  Set objFile = objFSO.OpenTextFile(USF_APACHE_VHOST_CNF, ForWriting)
+
+  '-Write top of array
+  For i=0 to (block_start - 1)
+    objFile.WriteLine(vhost_array(i))
+  Next
+
+  '-Write bottom of array
+  If Not vhost_array_end = block_end Then
+    For i= (block_end+1) to vhost_array_end
+      objFile.WriteLine(vhost_array(i))
+    Next
+  End If
+  objFile.Close
+
+  '--Remove entery from host file
+  us_host_delete(ip_server_name.value)
+
+  '--Set initial setting
+  initial_settings()
+
+  '--Update list box
+  update_config_file()  'Updates Listen and  *: Vhost directives
+  populate_select_box()
+
+  '--Disable if only default left
+  If select_vhost.options.length = 1 Then  'Only default diplayed
+    check_disable_vhost()                  'hence disable VHOST in main config
+  End If
+
+  Set objFSO  = Nothing
+  Set objFile = Nothing
+
+  Msgbox lang_av_popup_str13,,lang_av_popup_title13 'Restart Apache
+
+  bti_delete_vhost.blur
+End Function
+'========================================================= End Delete VHOST ===
+
+'=== Delete ===================================================================
+Function btf_delete_admin()
+  ip_server_admin.value = ""
+  b_help_port.blur
+End Function
+
+Function btf_delete_alias()
+  ip_server_alias.value = ""
+  bti_delete_alias.blur
+End Function
+
+Function btf_include_error_log()
+  ip_error_log.value = ""
+  bti_delete_error_log.blur
+End Function
+
+Function btf_delete_custom_log()
+  ip_custom_log.value = ""
+  bti_delete_custom_log.blur
+End Function
+
+'=============================================================== End Delete ===
+
+'=== Help =====================================================================
+Function f_help_port()
+  MsgBox lang_av_popup_str1,,lang_av_popup_title1
+  b_help_port.blur
+End Function
+
+Function f_help_server_admin()
+  MsgBox lang_av_popup_str2,,lang_av_popup_title2
+  b_help_server_admin.blur
+End Function
+
+Function f_help_document_root()
+  MsgBox lang_av_popup_str3,,lang_av_popup_title3
+  b_help_document_root.blur
+End Function
+
+Function f_help_server_name()
+  MsgBox lang_av_popup_str4,,lang_av_popup_title4
+  b_help_server_name.blur
+End Function
+
+Function f_help_server_alias()
+  MsgBox lang_av_popup_str5,,lang_av_popup_title5
+  b_help_server_alias.blur
+End Function
+
+Function f_help_error_log()
+  MsgBox lang_av_popup_str6,,lang_av_popup_title6
+  b_help_error_log.blur
+End Function
+
+Function f_help_custom_log()
+  MsgBox lang_av_popup_str7,,lang_av_popup_title7
+  b_help_custom_log.blur
+End Function
+
+Function f_help_addditional()
+  MsgBox lang_av_popup_str8,,lang_av_popup_title8
+  b_help_additional.blur
+End Function
+
+'================================================================= End Help ===
+
+'=== VHOST HELP DOCUMNTATION ==================================================
+' Displays HTML VHOST Documentation
+
+Function btf_help()
+ display_html_doc_page("apache_vhosts.html")
+
+ bti_help.blur                     'Remove focus and double line 
+End Function
+'============================================== END VHOST HELP DOCUMNTATION ===
+
+'=== Apend to hosts file ======================================================
+'Appends IP domain_name to hosts file
+'Format 127.0.0.1 fred.com
+
+Function us_host_append(domain_name)
+
+ Dim objFSO,WshShell,WinDir,HostsFile,objFile,line,filetxt
+ Const ForReading = 1, ForWriting = 2, ForAppending = 8, ReadOnly = 1
+
+ Set objFSO = CreateObject("Scripting.FileSystemObject") 'Create file object
+ Set WshShell=CreateObject("WScript.Shell")              'Create shell
+ WinDir =WshShell.ExpandEnvironmentStrings("%WinDir%")   'Get Windows dir
+
+ HostsFile = WinDir & "\System32\Drivers\etc\hosts"      'Get path to hosts file
+
+ 'Check if host name already exists
+ If us_host_exists(domain_name) Then                     'Host already exists
+    Exit Function                                        'hence nothing else to do
+ End If
+
+ '--- If read only chage to write
+ Set objFile = objFSO.GetFile(HostsFile)                 'Get file handle
+ If objFile.Attributes AND ReadOnly Then                 'Check state
+   objFile.Attributes = objFile.Attributes XOR ReadOnly  'Change mask
+ End If
+
+ '--- Apend to hosts file
+ Set filetxt = objFSO.OpenTextFile(HostsFile, ForAppending, True) 'Open for appending
+ filetxt.WriteLine(vbCRLF & "127.0.0.1 " & domain_name)           'Add IP/domain pair
+ filetxt.Close                                                    'Close
+
+ Set objFSO   = Nothing 
+ Set WshShell = Nothing 
+End Function
+'======================================================= End Apend to hosts ===
+
+'=== Delete entry in hosts file ===============================================
+'Delete IP domain_name from host file
+'Format 127.0.0.1 fred.com
+
+Function us_host_delete(domain_name)
+
+ Dim objFSO,WshShell,WinDir,HostsFile,objFile,line,temp_line,filetxt,found
+ Dim i,arryFileLines()
+
+ Const ForReading = 1, ForWriting = 2, ForAppending = 8, ReadOnly = 1
+
+ Set objFSO = CreateObject("Scripting.FileSystemObject")  'Create file object
+ Set WshShell=CreateObject("WScript.Shell")               'Create shell
+ WinDir =WshShell.ExpandEnvironmentStrings("%WinDir%")    'Get Windows dir
+
+ HostsFile = WinDir & "\System32\Drivers\etc\hosts"       'Get path to hosts file
+ Set objFile = objFSO.OpenTextFile(HostsFile, ForReading) 'Get handle for  reading
+
+ 'Check if host name already exists
+ If Not us_host_exists(domain_name) Then                  'Host does not exists
+    Exit Function                                         'hence nothing else to do
+ End If
+
+ '--- Read file into array exclude line to be deleted
+ i = 0                                    'Set array index ref
+ Do Until objFile.AtEndOfStream           'Read to end of file
+   line = objFile.ReadLine                'Read line from file
+
+   found = False                                             'Reset flag
+   temp_line= trim(line)                                     'Remove spaces
+   If InStr(temp_line,"127.0.0.1") = 1 Then                  'Localhost IP
+     temp_line = Replace(temp_line," ","")                   'Remove all spaces
+     If InStr(temp_line, "127.0.0.1" & domain_name) = 1 Then 'Host exists
+         found = True                                        'Found set flag
+     End If
+   End If
+
+   If Not found Then                  'Add line to array
+     Redim Preserve arryFileLines(i)  'Keep array and add another element
+     arryFileLines(i) = line          'Save line to array
+     i = i + 1                        'Increment array index
+   End If
+
+ Loop                                     'Read another line
+ objFile.Close                            'Finished with file hence close 
+ Set objFile  = Nothing 
+
+ '--- If read only chage to write
+ Set objFile = objFSO.GetFile(HostsFile)                 'Get file handle
+ If objFile.Attributes AND ReadOnly Then                 'Check state
+   objFile.Attributes = objFile.Attributes XOR ReadOnly  'Change mask
+ End If
+ Set objFile  = Nothing 
+
+ '-- Write array to file 
+ Set filetxt = objFSO.OpenTextFile(HostsFile, ForWriting, True) 'Open for write
+ For each line in arryFileLines                                 'Scan array
+   filetxt.WriteLine(line)                                      'Write to file
+ Next
+ filetxt.Close                                                  'Close
+
+ Set objFSO   = Nothing 
+ Set WshShell = Nothing 
+ Set objFile  = Nothing 
+
+End Function
+'=========================================== End Delete entry in hosts file ===
+
+'=== Exists in hosts file =====================================================
+'Checks host name exists in hosts file returns true of false
+'Format 127.0.0.1 fred.com
+
+Function us_host_exists(domain_name)
+
+ Dim objFSO,WshShell,WinDir,HostsFile,objFile,line
+ Const ForReading = 1
+
+ Set objFSO = CreateObject("Scripting.FileSystemObject")  'Create file object
+ Set WshShell=CreateObject("WScript.Shell")               'Create shell
+ WinDir =WshShell.ExpandEnvironmentStrings("%WinDir%")    'Get Windows dir
+
+ HostsFile = WinDir & "\System32\Drivers\etc\hosts"       'Get path to hosts file
+ Set objFile = objFSO.OpenTextFile(HostsFile, ForReading) 'Get handle for reading
+
+ 'Check if host name already exists
+ Do Until objFile.AtEndOfStream
+    line = objFile.ReadLine                               'Read line from file
+    line = trim(line)                                     'Remove spaces
+
+    If InStr(line,"127.0.0.1") = 1 Then                    'Localhost IP
+      line = Replace(line," ","")                          'Remove all spaces
+        If InStr(line, "127.0.0.1" & domain_name) = 1 Then 'Host exists
+         objFile.Close  'Close file                        'Finishd close file
+         us_host_exists = True                             'Found return true
+         Exit Function                                     'hence nothing else to do
+        End If
+    End If
+ Loop                     'Read next line
+
+ objFile.Close            'Close file
+
+ Set objFSO   = Nothing 
+ Set WshShell = Nothing 
+ Set objFile  = Nothing 
+
+ us_host_exists = False   'Not found return False
+
+End Function
+'================================================= End Exists in hosts file ===
+
+'=== View in browser ==========================================================
+Function btf_view_in_browser()
+
+ Dim temp_file,server_name,port,fileString,WshShell
+ Dim str1,str2,str3,str4,str5,str6,str7
+
+ server_name = ip_server_name.value 'get server name displayed
+ port =        ip_port.value        'get port displayed
+
+ temp_file = US_TMP & "\vhost_redirect.html"    'Temp file for redirection
+
+ 'Create and save redirection file
+
+ str1 = "<html><head><title>Redirecting to Vhost</title>"
+ str2 = "<meta http-equiv=" & Chr(34) &"refresh" &Chr(34)& " content=" &Chr(34)& "1;url="
+ str3 = "http://" & server_name & ":"
+ str4 = port
+ str5 = "/"
+ str6 = Chr(34)&">"
+ str7 = "</head><body></body></html>"
+
+ fileString = str1 & str2 & str3 & str4 & str5 & str6 
+ Call us_writefile_str(temp_file, fileString)          'Write string to file
+
+ 'Run file in browser
+ Set WshShell = CreateObject("WScript.Shell")          'Create a shell object
+ WshShell.Run temp_file, 0                             'Run process detached hidden
+ Set WshShell = Nothing 
+
+ 'If us_file_exists(temp_file) Then                    'Check for file
+ '  us_delete_file(temp_file)                          'Delete
+ 'End If 
+
+  bti_view_in_browser.blur
+End Function
+'========================================================== View in browser ===
+'mpg
+'=== Select root folder =======================================================
+'Get user selected folder and display it
+Function btf_select_folder()
+  Dim folder_selcted
+
+  folder_selcted = get_user_selected_folder()  'Get user input
+
+  If not folder_selcted = "" Then              'User selected a root folder
+    ip_document_root.value = folder_selcted    'Display root folder
+  End If  
+
+  bti_select_folder.blur
+End Function
+'================================================== End Select root folder ====
+
+'=== Get User Selected Folder =================================================
+' Get folder selected by user.
+' Allow option for user to create a file
+' Could have restricted this function to the Vhosts folder. 
+
+Function get_user_selected_folder()
+ Dim objShell,objFolder,objFolderItem,strPath,root_str
+ Const MY_COMPUTER   = &H11&
+ Const WINDOW_HANDLE = 0
+ Const OPTIONS       = 0
+
+ 'lang_av_folder_dialog_str1   "Select a folder for your Vhost root folder."
+ 'lang_av_folder_dialog_str2   "Alternatively create a new folder." 
+
+ root_str = lang_av_folder_dialog_str1 & vbNewLine & lang_av_folder_dialog_str2
+
+ Set objShell      = CreateObject("Shell.Application")
+ Set objFolder     = objShell.Namespace(MY_COMPUTER)
+ Set objFolderItem = objFolder.Self
+ strPath           = objFolderItem.Path
+
+ Set objShell  = CreateObject("Shell.Application")
+ Set objFolder = objShell.BrowseForFolder (WINDOW_HANDLE, root_str , OPTIONS, strPath) 
+
+If objFolder Is Nothing Then
+    get_user_selected_folder =""                'no selection
+Else
+  Set objFolderItem = objFolder.Self
+  get_user_selected_folder = objFolderItem.Path 'set  selected path
+End If
+
+ Set objShell      = Nothing 
+ Set objFolder     = Nothing 
+ Set objFolderItem = Nothing 
+
+End Function
+'============================================= End Get User Selected Folder ===
+
+</script>
+
+<style type="text/css">
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:97%;
+  height:12px;
+ background-color: #D1D1F5;
+}
+
+select{
+ background-color: #D1D1F5;
+  font-size:11px;
+  font-family:Verdana;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+
+textarea{
+ overflow:hidden;
+ overflow-y: hidden;
+ overflow-x: hidden; 
+ background-color: #D1D1F5;
+}
+
+.required {
+ background-color: #eeeeee;
+}
+
+</style>
+
+</head>
+
+<body>
+<table border="0" cellspacing="6" >
+ <tr>
+  <td>
+   <fieldset>
+   <legend id="legi_vhost_setup" >Virtual Host Setup</legend> 
+   <table border="0" cellspacing="4">
+ 
+     <tr>
+       <td id="itd_port" style="width:120px" >Port</td>
+       <td ><input   id="ip_port" type="text"></td>
+       <td ><button  id="b_help_port"   onclick="f_help_port()" >?</button></td>
+       <td >&nbsp;</td>
+     </tr>
+
+     <tr>
+       <td id="itd_server_admin" >Server Admin</td>
+       <td ><input   id="ip_server_admin" type="text"></td>
+       <td ><button  id="b_help_server_admin"   onclick="f_help_server_admin()" >?</button></td>
+       <td ><button id="bti_delete_admin" onclick="btf_delete_admin()" >Delete</button></td>
+     </tr>
+
+     <tr>
+       <td id="itd_document_root" >Document Root </td>
+       <td ><input   id="ip_document_root" type="text" class="required"></td>
+       <td ><button  id="b_help_document_root"   onclick="f_help_document_root()" >?</button></td>
+       <td ><button id="bti_select_folder" onclick="btf_select_folder()" >Select Folder</button></td>
+     </tr>
+
+     <tr>
+       <td id="itd_server_name" >Server Name</td>
+       <td ><input   id="ip_server_name" type="text" class="required"></td>
+       <td ><button  id="b_help_server_name"   onclick="f_help_server_name()" >?</button></td>
+       <td ><button id="bti_confirm_name" onclick="btf_confirm_name()" >Confirm</button></td>
+     </tr>
+
+     <tr>
+       <td id="itd_server_alias" >Server Alias</td>
+       <td ><input   id="ip_server_alias" type="text"></td>
+       <td ><button  id="b_help_server_alias"   onclick="f_help_server_alias()" >?</button></td>
+       <td ><button id="bti_delete_alias" onclick="btf_delete_alias()" >Delete</button></td>
+     </tr>
+
+     <tr>
+       <td id="itd_error_log" >Error Log</td>
+       <td ><input   id="ip_error_log" type="text"></td>
+       <td ><button  id="b_help_error_log"   onclick="f_help_error_log()" >?</button></td>
+       <td ><button id="bti_delete_error_log" onclick="btf_include_error_log()" >Delete</button></td>
+     </tr>
+
+     <tr>
+       <td id="itd_custom_log">Custom Log</td>
+       <td ><input   id="ip_custom_log" type="text"></td>
+       <td ><button  id="b_help_custom_log"   onclick="f_help_custom_log()" >?</button></td>
+       <td ><button id="bti_delete_custom_log" onclick="btf_delete_custom_log()" >Delete</button></td>
+     </tr>
+
+     <tr valign="bottom">
+
+   <td>
+     <table>
+        <tr><td><button id="bti_update_vhost" onclick="btf_update_vhost()" >Update Vhost</button></td></tr>
+        <tr><td><button id="bti_create_vhost" onclick="btf_create_vhost()" >Create Vhost</button></td></tr>
+        <tr><td><button id="bti_setup_cancel" onclick="btf_setup_cancel()" >Cancel</button></td></tr>
+      </table>
+    </td> 
+
+       <td  style="width:280px"><textarea id="id_ta_additional" style="width:98%" rows="5" wrap="off"></textarea></td>
+       <td colspan="2">
+
+        <table border="0" >
+           <tr>
+             <td style="width:16px"><button  id="b_help_additional"   onclick="f_help_addditional()" >?</button></td>
+             <td id="itd_additions" align="center">Aditions</td>
+        </table>
+       </td>
+     </tr>
+   </table>
+ 
+  </fieldset>
+  </td>
+
+
+ </tr>
+</table>
+
+
+<table border="0">
+ <tr>
+  <td>
+    <fieldset>
+    <legend id="legi_list_of_hosts" >List of Hosts</legend> 
+
+       <table cellspacing="6" border="0" >
+       <tr>
+
+<td style="width:120px" >
+
+<table>
+ <tr><td><button id="bti_delete_vhost" onclick="btf_delete_vhost()" >Delete Vhost</button></td></tr>
+ <tr><td><button id="bti_view_in_browser" onclick="btf_view_in_browser()" >View in Browser</button></td></tr>
+ <tr><td><button id="bti_list_cancel" onclick="btf_list_cancel()" >Cancel</button></td></tr>
+</table>
+
+</td>
+
+        <td style="width:280px">
+         <select size="6" name="select_vhost" style="width:100%" onchange="fsel_select_vhost()" id="id_sel_vhost">
+         <option value="1">Option 1</option>
+         <option value="2">Option 2</option>
+         <option value="3">Option 3</option>
+         <option value="4">Option 4</option>
+         <option value="5">Option 5</option>
+         <option value="6">Option 6</option>
+         </select>
+        </td>
+
+        <td style="width:16px"><button id="bti_help" onclick="btf_help()" >!</button></td>
+        <td id="itd_vhost_help">Help Vhosts</td>
+
+        </tr>
+       </table>
+
+    </fieldset>
+  </td>
+  </tr>
+</table>
+
+</body>
+</html>
+ 

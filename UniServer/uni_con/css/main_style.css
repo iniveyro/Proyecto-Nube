@@ -1,0 +1,100 @@
+body{
+ padding:0;
+ margin:4px;
+ background: #D1D1F5;
+}
+table{
+ width:100%;
+ padding:0;
+ margin:0;
+/* border: 1px solid black; */
+}
+
+img{
+ border: 1px solid black;
+}
+
+button, button:focus, button:visited, button:active{
+  width:100%;
+  color: #222222;
+  background: #B2B2F6;
+  border: 1px solid #900;
+  font-family: verdana,sans-serif;
+  font-size:11px;
+  line-height:11px;
+}
+
+button:hover {
+  color: #ffffff;
+  background: #5E5EB1;
+}
+
+.common_button{
+  background: #D4D3F3;
+}
+  
+/* Small help button */
+.bt_help, .bt_help:focus, .bt_help:visited, .bt_help:active{
+  width:18px;
+  height:18px;
+  border: 1px solid #900;
+  color: #000000;
+  background: #D4D3F3;
+  font-family: verdana,sans-serif;
+  font-size:11px;
+}
+
+.bt_help:hover{
+  color: #ffffff;
+  background: #5E5EB1;
+}
+
+/* Top legend */
+legend{
+  font-size:10px;
+  font-family:Verdana;
+  margin-top:2px;
+  margin-bottom:2px;
+}
+
+fieldset{
+/* border: solid 1px red;*/
+ padding-bottom:4px;
+ padding-left:4px;
+ padding-right:4px;
+}
+
+/* Disabled buttons */
+button[disabled] { 
+  color: #D4D3F3;
+  background: #D4D3F3;
+}
+
+/* Set select font size */
+select {
+  font-size:11px;
+  font-family:Verdana;
+  background: #B2B2F6;
+}
+
+
+/* Move select to hide its border */
+.wrapper{
+  width:99%;
+  position: relative;
+  height: 16px;
+  overflow: hidden;
+  border:1px solid #000000;
+}
+
+.select_dd{
+  color: black;
+  position: absolute;
+  width: auto;
+  top: -2px;
+  left: -2px;
+ }
+
+
+
+

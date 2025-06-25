@@ -1,0 +1,182 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>Untitled Document</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'Globals
+Dim old_apache_port,old_apache_ssl_port,old_mysql_port
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ us_init()             'Check servers have moved and update accordingly
+
+ '--Set legend text
+ legi_apache.InnerHtml     = lang_apache_1a         'Apache port
+ legi_apache_ssl.InnerHtml = lang_apache_2a         'Apache SSL port
+ legi_mysql.InnerHtml      = lang_mysql_1a          'MySQL port
+
+ '--Set button text
+ bi_apache_change.value     = lang_port_change_change     'Change
+ bi_apache_ssl_change.value = lang_port_change_change     'Change
+ bi_mysql_change.value      = lang_port_change_change     'Change
+ bi_reload.value            = lang_port_change_reload     'Reload
+ bi_all_change.value        = lang_port_change_change_all 'Change All
+
+ reload_port_values() 'Display ports contained in config files 
+
+End sub
+'------------------------------------------------------------------------------
+
+'=== Reload ports =============================================================
+'Get ports from configuration files
+Function reload_port_values()
+
+  old_apache_port            =  us_get_apache_port()
+  old_apache_ssl_port        =  us_get_apache_ssl_port()
+  old_mysql_port             =  us_get_mysql_port()
+
+  iNew_apache_port.value     = old_apache_port
+  iNew_apache_ssl_port.value = old_apache_ssl_port
+  iNew_mysql_port.value      = old_mysql_port
+
+End Function
+'========================================================= End Reload ports ===
+
+'=== User Reload ports ========================================================
+'User request get ports from configuration files
+Function btf_reload()
+  reload_port_values()  'Display ports
+  bi_reload.blur        'Remove focus and double line 
+End Function
+'========================================================= End Reload ports ===
+
+'=== Change Apache Port =======================================================
+'User request. Change port
+Function btf_change_apache_port()
+  call us_change_apache_port(old_apache_port,iNew_apache_port.value)
+  us_remove_main_listen_port()
+  bi_apache_change.blur        'Remove focus and double line 
+  MsgBox lang_port_change_changed,,lang_port_change_change_title
+End Function
+'=================================================== End Change Apache port ===
+
+'=== Change Apache SSL Port ===================================================
+'User request. Change port
+Function btf_change_ssl_apache_port()
+  call us_change_apache_ssl_port(old_apache_ssl_port,iNew_apache_ssl_port.value) 
+  bi_apache_ssl_change.blur        'Remove focus and double line 
+  MsgBox lang_port_change_changed,,lang_port_change_change_title
+End Function
+'=============================================== End Change Apache SSL port ===
+
+'=== Change MySQL Port ========================================================
+'User request. Change port
+Function btf_change_mysql_port()
+  call us_change_mysql_port(old_mysql_port,iNew_mysql_port.value) 
+  bi_mysql_change.blur        'Remove focus and double line 
+  MsgBox lang_port_change_changed,,lang_port_change_change_title
+End Function
+'==================================================== End Change MySQL port ===
+
+'=== Change All Ports =========================================================
+'User request. Change all ports
+Function btf_change_all()
+  call us_change_apache_port(old_apache_port,iNew_apache_port.value)
+  call us_change_apache_ssl_port(old_apache_ssl_port,iNew_apache_ssl_port.value)
+  call us_change_mysql_port(old_mysql_port,iNew_mysql_port.value)
+  us_remove_main_listen_port()
+  bi_all_change.blur        'Remove focus and double line 
+  MsgBox lang_port_change_changed,,lang_port_change_change_title
+End Function
+'===================================================== End Change All ports ===
+
+</script>
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<style type="text/css">
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:100px;
+ background-color: #D1D1F5;
+}
+
+</style>
+
+<script language="JavaScript">
+//******************************************************************************
+//Allow only numeric input and backspace key
+//******************************************************************************
+function onlyNumbers(evt){
+ var e = event || evt; // for trans-browser compatibility
+ var charCode = e.which || e.keyCode;
+
+ if (charCode > 31 && (charCode < 48 || charCode > 57))
+  return false;
+  return true;
+}
+//-------------------------------------------------------------------------------
+</script>
+
+</head>
+
+<body>
+
+<fieldset>
+<legend id="legi_apache" >Apache port</legend> 
+
+<table cellspacing="0" border="0" >
+<tr>
+<td width="100"><input  id="iNew_apache_port" type="text"  onkeypress="javascript: return onlyNumbers();" ></td>
+<td><button  id="bi_apache_change" onclick="btf_change_apache_port()" >Change</button></td>
+</tr>
+</table>
+
+</fieldset>
+
+<fieldset>
+<legend id="legi_apache_ssl" >Apache SSL port</legend> 
+
+<table cellspacing="0" border="0" >
+<tr>
+<td width="100"><input  id="iNew_apache_ssl_port" type="text"  onkeypress="javascript: return onlyNumbers();" ></td>
+<td><button    id="bi_apache_ssl_change" onclick="btf_change_ssl_apache_port()" >Change</button></td>
+</tr>
+</table>
+
+</fieldset>
+
+<fieldset>
+<legend id="legi_mysql" >MySQL port</legend> 
+
+<table cellspacing="0" border="0" >
+<tr>
+<td width="100"><input  id="iNew_mysql_port" type="text"  onkeypress="javascript: return onlyNumbers();" ></td>
+<td><button   id="bi_mysql_change"  onclick="btf_change_mysql_port()" >Change</button></td>
+</tr>
+</table>
+
+</fieldset>
+
+<fieldset>
+<legend ></legend> 
+<table cellspacing="0" border="0" >
+<tr>
+<td width="100"><button    id="bi_reload" onclick="btf_reload()" >Reload</button></td>
+<td><button   id="bi_all_change"  onclick="btf_change_all()" >Change All</button></td>
+</tr>
+</table>
+</fieldset>
+
+</body>
+</html>

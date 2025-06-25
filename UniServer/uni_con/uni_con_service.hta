@@ -1,0 +1,956 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 406;                                // Set Application width
+   var hta_height = 282;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',200);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left,hta_top);                  // it into view.
+   }
+  </script>
+
+  <title>Server - Service</title>
+ 
+  <hta:application
+   id='coral_server_1'
+   applicationname='coral_server_1'
+   border="thin"
+   icon='./images/coral_server_1.ico'
+   maximizeButton="no"
+   navigable="yes"
+   scroll="no"
+   singleinstance="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<script type="text/vbscript" src="includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+ Option Explicit
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ Dim refrtime
+
+ document.title = "Server - Service -" & " " & us_get_server_version ' Set new page title
+
+ space_check()         'Check for spaces in path
+ us_init()             'Check servers have moved and update accordingly
+ us_za_issue()         'Check for ZoneAlarm and warn user if running.
+
+ button_initial_text() 'Set button default text
+ update_status()       'Update button status when page has loaded 
+
+ 'Check ports are free and passwords set
+ call setTimeout("pre_check", 10, "vbscript") 'Allow display then update pre_check()
+
+End sub
+
+'=== Space check ==============================================================
+' Legacy suitability check no spaces in path to folder UniServer allowed
+' Also avoids Vista's insufficient write permissions in C:\Program Files
+Function space_check()
+ Dim path
+   path = location.pathname    '* Get path to this file
+
+  If InStr(path," ") Then      'Check for space
+     Msgbox lang_space_popup_str1,,lang_space_popup_title1
+     window.close()            'Close cant start server with space
+     exit function             'Nothing else to do
+  End If
+
+End Function
+'========================================================== End Space check ===
+
+'=== ZoneAlarm Detection ======================================================
+' The ZoneAlarm application conflicts with the Apache Server
+' producing a blue screen of death when Apache is closed. 
+
+Function us_za_issue()
+ Dim path
+
+  If us_process_running("zatray.exe") Then         'Check ZA is running
+    Msgbox lang_za_popup_str1,,lang_za_popup_title1  'Yes: Display warning
+  End If
+
+End Function
+'================================================== End ZoneAlarm Detection ===
+
+'=== Pre Check ================================================================
+Function pre_check()
+ Dim objShell,apache_port,apache_ssl_port,mysql_port,port_in_use,port_in_use_str 
+ Dim details_array,skip,data_str,split_array
+
+ Set objShell = CreateObject("WScript.Shell")
+'--- To start servers ports must be free. If these are in use by another
+'    application warn user to take corrective action.
+
+  '-- Get current server ports - May have been changed from defaults 
+  apache_port     = us_get_apache_port()
+  apache_ssl_port = us_get_apache_ssl_port()
+  mysql_port      = us_get_mysql_port()
+
+  port_in_use     = false   ' true - display warning message 
+  port_in_use_str = ""      ' set warning message to display 
+  port_in_use_str =  lang_pre_in_use & vbCRLF & vbCRLF
+
+  '-- Is Apache being used
+  if us_port_in_use_ap(apache_port) And us_get_apache_tracker() = "free" Then 
+   port_in_use = true                            'port in use set flag 
+   details_array   =  us_get_port_user_details(apache_port) 'Get details
+   port_in_use_str = port_in_use_str & lang_pre_port_number      & " = " & details_array(0) & vbCRLF
+   port_in_use_str = port_in_use_str & lang_pre_pid              & " = " & details_array(1) & vbCRLF
+   port_in_use_str = port_in_use_str & lang_pre_process_name     & " = " & details_array(2) & vbCRLF
+   port_in_use_str = port_in_use_str & lang_pre_path_to_process  & " = " & details_array(3) & vbCRLF & vbCRLF
+  End If
+
+  '-- Is Apache SSL being used
+  if us_port_in_use_ap(apache_ssl_port) And us_get_apache_tracker() = "free" Then 
+   port_in_use = true                            'port in use set flag 
+   details_array   =  us_get_port_user_details(apache_ssl_port) 'Get details
+   port_in_use_str = port_in_use_str & lang_pre_port_number      & " = " & details_array(0) & vbCRLF
+   port_in_use_str = port_in_use_str & lang_pre_pid              & " = " & details_array(1) & vbCRLF
+   port_in_use_str = port_in_use_str & lang_pre_process_name     & " = " & details_array(2) & vbCRLF
+   port_in_use_str = port_in_use_str & lang_pre_path_to_process  & " = " & details_array(3) & vbCRLF & vbCRLF
+  End If
+
+
+  '-- Is MySQL being used
+  if us_port_in_use_my(mysql_port) And us_get_mysql_tracker() = "free" Then 
+   port_in_use = true                            'port in use set flag 
+   details_array   =  us_get_port_user_details(mysql_port) 'Get details
+   port_in_use_str = port_in_use_str & lang_pre_port_number      & " = " & details_array(0) & vbCRLF
+   port_in_use_str = port_in_use_str & lang_pre_pid              & " = " & details_array(1) & vbCRLF
+   port_in_use_str = port_in_use_str & lang_pre_process_name     & " = " & details_array(2) & vbCRLF
+   port_in_use_str = port_in_use_str & lang_pre_path_to_process  & " = " & details_array(3) & vbCRLF & vbCRLF
+  End If
+
+
+   port_in_use_str = port_in_use_str & lang_pre_popup_str1  'Add solution text
+
+  If port_in_use Then                                  'Display warning message 
+     Msgbox port_in_use_str,,lang_pre_popup_title1     'Ports in use pop-up box
+     'Disable buttons
+ 
+    bti_install_apache_service.Disabled    = True   'disable button 
+     bti_start_apache_service.Disabled     = True   'disable button 
+     bti_install_mysql_service.Disabled    = True   'disable button 
+     bti_start_mysql_service.Disabled      = True   'disable button 
+     bti_start_both_services.Disabled      = True   'disable button 
+
+     Set objShell = Nothing
+     exit function
+  End If
+
+  '=== Nag section ===
+  ' If a port in use no point in nagging since the following section
+  ' Requires a working server 
+
+  If Not port_in_use Then             'Stand a good chance servers will run 
+
+   If us_my_ini_get(USF_TRACKER,"NAG","nag_user") = "true" Then 'Is nag user set
+   skip = false                                                 'Skip tracker. Provides option to disable later
+
+
+      '-- Check passwords have been changed. If defaults detected nag user
+
+      '--- MySQL password
+      If  us_get_mysql_password() = "root" Then            'Is default 
+        '-- Ask if they wish to change MySQL password   
+        If MsgBox(lang_pre_popup_str2,4,lang_pre_popup_title2) = vbYes Then
+            objShell.Run (US_UNI_CON & "\scripts\Set_new_mysql_password.hta"),,true 'Display MySQL Password change window
+        Else
+            skip = true 'User skipped setting a password
+        End If
+      End If
+
+      '--- Option to disable nagging
+      ' User skipped one or more hence provide option to disable nagging 
+      If skip Then
+        'Ask if they wish to disable nagging in config_tracker.ini   
+        If MsgBox(lang_pre_popup_str4,4,lang_pre_popup_title4) = vbYes Then
+          call us_my_ini_set(USF_TRACKER,"NAG","nag_user","false") 'Diable nagging in config file
+        End If
+      End If 'end if skip
+
+
+   End If '--nag_user
+  End If '--Not port_in_use
+  Set objShell = Nothing
+End Function
+'============================================================ End Pre Check ===
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'Set initial button status. Assumes server not running
+'******************************************************************************
+Function button_initial_text()
+ legi_start_stop_services.InnerHtml = lang_legend_start_stop_services
+  bti_install_apache_service.value   = lang_install_apache_service
+  bti_start_apache_service.value     = lang_start_apache_service
+
+  bti_install_mysql_service.value    = lang_install_mysql_service
+  bti_start_mysql_service.value      = lang_start_mysql_service
+  bti_start_both_services.value      = lang_start_both_services
+
+ legi_server_utilities.InnerHtml   = lang_server_utilities
+  bti_mysql_console.value          = lang_mysql_console
+  bti_server_status.value          = lang_server_status
+  bti_apache_syntax_check.value    = lang_apache_syntax_check
+  bti_server_configuration.value   = lang_server_configuration
+  bti_multi_servers.value          = lang_multi_servers
+  bti_about.value                  = lang_about
+
+  bti_view_www.value               = lang_view_www
+  bti_view_ssl.value               = lang_view_ssl
+  bti_view_phpinfo.value           = lang_view_php_info
+  bti_view_phpmyadmin.value        = lang_phpmyadmin
+  bti_server_documentation.value   = lang_server_documentation
+
+  imgi_apache.src = "images/red.gif"  'display Apache stop
+  imgi_mysql.src  = "images/red.gif"  'display MySQL stop
+
+  bti_mysql_console.Disabled   = True   'disable button 
+  bti_view_www.Disabled        = True   'disable button 
+  bti_view_ssl.Disabled        = True   'disable button 
+  bti_view_phpinfo.Disabled    = True   'disable button 
+  bti_view_phpmyadmin.Disabled = True   'disable button 
+
+  populate_language_menu()              'Add items to drop down menu
+
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+'Populate Language menu from files in language folder
+'******************************************************************************
+Function populate_language_menu()
+ Dim objFSO,objFolder,colFiles,objFile,id
+
+ set id  = seli_form_lang.seli_select_lang           'Create id select object
+ call us_select_add_item(id,"Dummy1",lang_select_language )        'Add first item
+ call us_select_add_item(id ,"Dummy2",lang_select_language_spacer) 'Add second item
+
+ '-- Read all files and add to list
+ Set objFSO = CreateObject("Scripting.FileSystemObject")    'Create file object
+ Set objFolder = objFSO.GetFolder(US_UNI_CON_LANG)            'Create object to folder
+
+ Set colFiles = objFolder.Files                             'Get list af all files
+ For Each objFile in colFiles                               'Scan list of files
+   If Not objFile.Name = "lang.vbs" Then                    'Exclude master language file
+     call us_select_add_item(id,objFile.Name,Left(objFile.Name, Len(objFile.Name) - 4))
+   End If
+ Next
+ call us_select_add_item(id ,"Dummy2",lang_select_language_spacer) 'Add last item
+
+ set id        = Nothing 
+ Set objFSO    = Nothing 
+ Set objFolder = Nothing 
+End Function
+'------------------------------------------------------------------------------
+
+
+'******************************************************************************
+'Update Language file
+'******************************************************************************
+'Gets selected language. Replaces language file with selected language file
+'Reload page to reflect new language change
+
+Function fsel_update_lang()
+ Dim file_name,selected_file,lang_file,objFSO
+ Const OverwriteExisting = TRUE
+
+ seli_form_lang.seli_select_lang.blur                 'Remove focus 
+ file_name = seli_form_lang.seli_select_lang.value    'Get selection
+
+ If not file_name = "Dummy1" and not file_name = "Dummy2" Then    'Skip if not language selection
+
+   '-- Set language in configuration file
+   call us_my_ini_set(USF_TRACKER,"LANGUAGE","selected_lang",Left(file_name, Len(file_name) - 4))   'Set a value in .ini file  
+
+   '-- Switch in language file
+   selected_file = US_UNI_CON_LANG & "\" & file_name    'Buld full path
+   lang_file     = US_UNI_CON_LANG & "\" & "lang.vbs"   'File to replace
+
+   Set objFSO = CreateObject("Scripting.FileSystemObject")      'Create file object
+   objFSO.CopyFile selected_file , lang_file, OverwriteExisting 'Replace lang file
+   Set objFSO = Nothing 
+   Location.Reload(True)                                        'Reload page
+   us_hta_delay("1000")                                         'Delay in ms now update UniTray
+   us_unitray_update("Change")                                  'Check for UniTray and change status
+ Else
+  seli_form_lang.seli_select_lang.value ="Dummy1"      'Re-set initial value displayed to user
+ End If
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+'Update status of each button. Uses real time information
+'******************************************************************************
+Function update_status()
+ Dim  apache_tracker,mysql_tracker,AP,MY,APS,MYS,SSL
+
+ '== Get server current status from trackers (minimum file read)
+ apache_tracker  = us_get_apache_tracker()    ' Apache tracker
+ mysql_tracker   = us_get_mysql_tracker()     ' MySQL tracker
+
+ '== Server status shortcuts (reducees processing)
+ AP  = us_apache_running()                    ' Apache running shortcut
+ MY  = us_mysql_running()                     ' MySQL  running shortcut
+ APS = us_is_apache_installed_as_a_service()  ' Installed service
+ MYS = us_is_mysql_installed_as_a_service()   ' Installed service
+ SSL = us_ssl_enabled()                       ' SSL Enabled
+
+'=== PROGRAM OR SERVICE ===
+
+ '=== APACHE INSTALL button
+ If Not APS and apache_tracker = "free" Then
+   bti_install_apache_service.Disabled = False                       'Enable button 
+   bti_install_apache_service.value    = lang_install_apache_service 'Change text 
+ Else
+   bti_install_apache_service.Disabled = True                        'Enable button 
+ End If
+
+ If APS and AP Then
+   bti_install_apache_service.Disabled = True                          'Disable button 
+   bti_install_apache_service.value    = lang_uninstall_apache_service 'Change text 
+ End If
+
+ If APS and Not AP Then
+   bti_install_apache_service.Disabled = False                         'Enable button 
+   bti_install_apache_service.value    = lang_uninstall_apache_service 'Change text 
+ End If
+
+ '=== APACHE run button --- 
+ If Not APS Then                                         'Not Installed as service
+   bti_start_apache_service.Disabled = True              'Disable button 
+ End If
+
+ If APS And AP Then                                             'Apache running
+     bti_start_apache_service.Disabled = False                  'Enable button 
+     bti_start_apache_service.value = lang_stop_apache_service  'Change text to start
+ End If
+
+ If APS and Not AP Then                                          'Apache not running
+     bti_start_apache_service.Disabled = False                   'Enable button 
+     bti_start_apache_service.value = lang_start_apache_service  'Change text to stop
+ End If
+
+
+ '=== MSQL INSTALL button
+ If Not MYS and mysql_tracker = "free" Then
+   bti_install_mysql_service.Disabled = False                      'Enable button 
+   bti_install_mysql_service.value    = lang_install_mysql_service 'Change text 
+ Else
+   bti_install_mysql_service.Disabled = True                        'Enable button 
+ End If
+
+ If MYS and MY Then
+   bti_install_mysql_service.Disabled = True                          'Disable button 
+   bti_install_mysql_service.value    = lang_uninstall_mysql_service  'Change text 
+ End If
+
+ If MYS and Not MY Then
+   bti_install_mysql_service.Disabled = False                        'Enable button 
+   bti_install_mysql_service.value    = lang_uninstall_mysql_service 'Change text 
+ End If
+
+ '=== MySQL run button --- 
+ If Not MYS Then                                              'Not Installed as service
+   bti_start_mysql_service.Disabled = True                    'Disable button 
+ End If
+
+ If MYS And MY Then                                           'MySQL running
+     bti_start_mysql_service.Disabled = False                 'Enable button 
+     bti_start_mysql_service.value = lang_stop_mysql_service  'Change text to start
+ End If
+
+ If MYS and Not MY Then                                        'MySQL not running
+     bti_start_mysql_service.Disabled = False                  'Enable button 
+     bti_start_mysql_service.value = lang_start_mysql_service  'Change text to stop
+ End If
+
+ '=== Both services button --- 
+
+ bti_start_both_services.Disabled  = True                    'Disable button 
+
+ If Not APS and Not MYS and apache_tracker = "free" and mysql_tracker = "free" Then
+   bti_start_both_services.Disabled  = False                 'Enable button
+   bti_start_both_services.value = lang_start_both_services  'Change text to start
+ End If
+
+ If APS and MYS and AP and MY Then
+   bti_start_both_services.Disabled  = False                 'Enable button
+   bti_start_both_services.value = lang_stop_both_services   'Change text to start
+ End If 
+
+ '=== INDICATORS =====
+
+ '== Apache service install indicator
+ If APS Then                                     ' Apache installed as service
+   imgi_apache_install.src = "images/green.gif"  ' display installed
+ Else                                            ' Apache not installed as service
+   imgi_apache_install.src = "images/red.gif"    ' display not installed
+ End If
+
+ '== Apache indicator
+ If AP Then                              ' Apache running
+   imgi_apache.src = "images/green.gif"  ' display Apache running
+ Else                                    ' Apache not running
+   imgi_apache.src = "images/red.gif"    ' display Apache stopped
+ End If
+
+ '== MSQL service install indicator
+ If MYS Then                                    ' MySQL installed as service
+   imgi_mysql_install.src = "images/green.gif"  ' display installed
+ Else                                           ' MySQL not installed as service
+   imgi_mysql_install.src = "images/red.gif"    ' display not installed
+ End If
+
+ '== MySQL indicator
+ If MY Then                              ' MySQL running
+   imgi_mysql.src = "images/green.gif"   ' display MySQL running
+ Else                                    ' MySQL not running
+   imgi_mysql.src = "images/red.gif"     ' display MySQL stopped
+ End If
+
+ '=== BUTTON GROUPS ======
+
+ '== Root www and Apanel 
+ If AP Then
+  bti_view_www.Disabled      = False     'Enable Root WWW 
+  bti_view_phpinfo.Disabled  = False     'Enable phpInfo button 
+ Else
+  bti_view_www.Disabled      = True      'Disable Root WWW 
+  bti_view_phpinfo.Disabled  = True      'Disable phpInfo button 
+ End If
+
+ '== Root ssl
+ If AP And SSL Then
+  bti_view_ssl.Disabled      = False    'Enable Root SSL buton 
+ Else
+  bti_view_ssl.Disabled      = True     'Disable Root SSL button 
+ End If
+
+ '== MySQL Command prompt
+ If MY Then
+  imgi_mysql.src = "images/green.gif"      'display MySQL running
+  bti_mysql_console.Disabled      = False  'Enable MySQl Command prompt 
+ Else
+  imgi_mysql.src = "images/red.gif"        'display MySQL stopped
+  bti_mysql_console.Disabled      = True   'Disable MySQl Command prompt 
+ End If
+
+ '== phpMyAdmin
+ If MY And AP Then
+  bti_view_phpmyadmin.Disabled  = False     'Enable phpMyAdmin 
+ Else
+  bti_view_phpmyadmin.Disabled  = True      'Disable phpMyAdmin 
+ End If
+
+ '== Multi Servers
+ If MYS Or APS Then
+  bti_multi_servers.Disabled  = True     'Disable Multi Servers 
+ Else
+  bti_multi_servers.Disabled  = False    'Enable Multi Servers 
+ End If
+
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Install/Uninstall Apache service - Toggle button
+'******************************************************************************
+Function btf_install_apache_service()
+
+  bti_install_apache_service.Disabled = True          'disable button 
+  bti_start_both_services.Disabled    = True          'disable button 
+
+  imgi_apache_install.src="images/wait16.gif"         'display busy image
+
+   if bti_install_apache_service.value = lang_install_apache_service Then   
+      us_install_apache_service()                          'Install Apache Service
+      Do                                                   'Wait for Service install
+         us_hta_delay("1000")                              'Delay in ms
+      Loop While Not us_is_apache_installed_as_a_service() 'Check Install status
+   Else                                                    'Is stop button
+      us_uninstall_apache_service()                        'Uninstall Apache Service
+      Do                                                   'Wait service uninstall
+         us_hta_delay("1000")                              'Delay in ms
+      Loop While us_is_apache_installed_as_a_service()     'Check Apache status
+   End if
+
+   us_hta_delay("5000")                           'Delay in ms
+   update_status()                                'Update button status
+   us_hta_delay("1000")                           'Delay in ms now update UniTray
+   us_unitray_update("Refresh")                   'Check for UniTray and refresh status
+
+  bti_install_apache_service.Disabled = false     'Enable button 
+
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Start/Stop Apache Service - Toggle button
+'******************************************************************************
+Function  btf_start_apache_service()
+  bti_start_apache_service.Disabled  = True            'disable button 
+  bti_start_both_services.Disabled   = True            'disable button 
+  imgi_apache.src="images/wait16.gif"                  'display busy image
+
+   if bti_start_apache_service.value = lang_start_apache_service Then   
+      us_start_apache_service()                        'Start Apache service
+      Do                                               'Wait for Apache to start
+         us_hta_delay("1000")                          'Delay in ms
+      Loop While Not us_apache_running()               'Check Apache status
+         us_hta_delay("2000")                          'Delay in ms
+      us_redirect("start") 'Check user wants to display page. Display accordingly
+
+   Else                                                'Is stop button
+      us_stop_apache_service()                         'Stop Apache service
+      Do                                               'Wait for Apache to stop
+         us_hta_delay("1000")                          'Delay in ms
+      Loop While us_apache_running()                   'Check Apache status
+   End if
+
+   update_status()                                    'Update button status
+   us_hta_delay("1000")                               'Delay in ms now update UniTray
+   us_unitray_update("Refresh")                       'Check for UniTray and refresh status
+
+  bti_start_apache_service.Disabled = false           'Enable button 
+  bti_start_apache_service.blur                       'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Install/Uninstall MySQL service - Toggle button
+'******************************************************************************
+Function btf_install_mysql_service()
+
+  bti_install_mysql_service.Disabled = True          'disable button 
+  bti_start_both_services.Disabled   = True          'disable button 
+
+  imgi_mysql_install.src="images/wait16.gif"         'display busy image
+
+   if bti_install_mysql_service.value = lang_install_mysql_service Then   
+      us_install_mysql_service()                          'Install mysql Service
+      Do                                                  'Wait for Service install
+         us_hta_delay("1000")                             'Delay in ms
+      Loop While Not us_is_mysql_installed_as_a_service() 'Check Install status
+   Else                                                   'Is stop button
+      us_uninstall_mysql_service()                        'Uninstall mysql Service
+      Do                                                  'Wait service uninstall
+         us_hta_delay("1000")                             'Delay in ms
+      Loop While us_is_mysql_installed_as_a_service()     'Check Apache status
+   End if
+
+   update_status()                                'Update button status
+   us_hta_delay("1000")                           'Delay in ms now update UniTray
+   us_unitray_update("Refresh")                   'Check for UniTray and refresh status
+
+  bti_install_mysql_service.Disabled = false     'Enable button 
+
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Start/Stop MySQL Service - Toggle button
+'******************************************************************************
+Function  btf_start_mysql_service()
+
+  bti_start_mysql_service.Disabled  = True            'disable button 
+  bti_start_both_services.Disabled   = True           'disable button 
+  imgi_mysql.src="images/wait16.gif"                  'display busy image
+
+   if bti_start_mysql_service.value = lang_start_mysql_service Then   
+      us_start_mysql_service()                        'Start MySQL service
+      Do                                              'Wait for MySQL to start
+         us_hta_delay("1000")                         'Delay in ms
+      Loop While Not us_mysql_running()               'Check MSQL status
+   Else                                               'Is stop button
+      us_stop_mysql_service()                         'Stop MySQL service
+      Do                                              'Wait for \MySQL to stop
+         us_hta_delay("1000")                         'Delay in ms
+      Loop While us_mysql_running()                   'Check MySQL status
+   End if
+
+   update_status()                                'Update button status
+   us_hta_delay("1000")                           'Delay in ms now update UniTray
+   us_unitray_update("Refresh")                   'Check for UniTray and refresh status
+
+  bti_start_mysql_service.Disabled = false        'Enable button 
+  bti_start_mysql_service.blur                    'Remove focus and double line 
+
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Start/Stop Both Apache and MySQL Services - Toggle button
+'******************************************************************************
+Function  btf_start_both_services()
+
+  bti_start_both_services.Disabled     = True      'Disable button 
+  bti_install_apache_service.Disabled  = True      'disable button 
+  bti_install_mysql_service.Disabled   = True      'disable button 
+  bti_start_apache_service.Disabled    = True      'disable button 
+  bti_start_mysql_service.Disabled     = True      'disable button 
+
+   if bti_start_both_services.value = lang_start_both_services then   'If start button   
+
+      '== Install Apache Service
+      imgi_apache_install.src="images/wait16.gif"         'display busy image
+      us_install_apache_service()                         'Install Apache Service
+      Do                                                  'Wait for Service install
+        us_hta_delay("1000")                              'Delay in ms
+      Loop While Not us_is_apache_installed_as_a_service()'Check Install status
+      imgi_apache_install.src="images/green.gif"         'display running image
+
+      '== Start Apache Service
+      imgi_apache.src="images/wait16.gif"              'display busy image
+      us_start_apache_service()                        'Start Apache service
+      Do                                               'Wait for Apache to start
+         us_hta_delay("1000")                          'Delay in ms
+      Loop While Not us_apache_running()               'Check Apache status
+      imgi_apache.src="images/green.gif"               'display running image
+         us_hta_delay("2000")                          'Delay in ms
+      us_redirect("start") 'Check user wants to display page. Display accordingly
+
+      '== Install MySQL service
+      imgi_mysql_install.src="images/wait16.gif"          'display busy image
+      us_install_mysql_service()                          'Install mysql Service
+      Do                                                  'Wait for Service install
+         us_hta_delay("1000")                             'Delay in ms
+      Loop While Not us_is_mysql_installed_as_a_service() 'Check Install status
+      imgi_mysql_install.src="images/green.gif"           'display running image
+
+      '== Start MySQL service
+      imgi_mysql.src="images/wait16.gif"              'display busy image
+      us_start_mysql_service()                        'Start MySQL service
+      Do                                              'Wait for MySQL to start
+         us_hta_delay("1000")                         'Delay in ms
+      Loop While Not us_mysql_running()               'Check MSQL status
+      imgi_mysql.src="images/green.gif"               'display running image
+
+   Else                                             'Is stop button
+      '== Stop Apache Service
+      imgi_apache.src="images/wait16.gif"              'display busy image
+      us_stop_apache_service()                         'Stop Apache service
+      Do                                               'Wait for Apache to stop
+         us_hta_delay("1000")                          'Delay in ms
+      Loop While us_apache_running()                   'Check Apache status
+      imgi_apache.src="images/red.gif"                 'display stop image
+
+      '== Uninstall Apache Service
+      imgi_apache_install.src="images/wait16.gif"          'display busy image
+      us_uninstall_apache_service()                        'Uninstall Apache Service
+      Do                                                   'Wait service uninstall
+         us_hta_delay("1000")                              'Delay in ms
+      Loop While us_is_apache_installed_as_a_service()     'Check Apache status
+      imgi_apache_install.src="images/red.gif"             'display stop image
+
+      '== Stop MySQL service
+      imgi_mysql.src="images/wait16.gif"                  'display busy image
+       us_stop_mysql_service()                            'Stop MySQL service
+      Do                                                  'Wait for \MySQL to stop
+         us_hta_delay("1000")                             'Delay in ms
+      Loop While us_mysql_running()                       'Check MySQL status
+      imgi_mysql.src="images/red.gif"                     'display stop image
+
+      '== Uninstall MySQL service
+      imgi_mysql_install.src="images/wait16.gif"         'display busy image
+      us_uninstall_mysql_service()                        'Uninstall mysql Service
+      Do                                                  'Wait service uninstall
+         us_hta_delay("1000")                             'Delay in ms
+      Loop While us_is_mysql_installed_as_a_service()     'Check Apache status
+      imgi_mysql_install.src="images/red.gif"             'display stop image
+
+   End if
+
+   update_status()                                   'Update button status
+  us_hta_delay("1000")                               'Delay in ms now update UniTray
+  us_unitray_update("Refresh")                       'Check for UniTray and refresh status
+
+   bti_start_apache_service.Disabled = false                 'Enable button 
+   bti_start_mysql_service.Disabled  = false                 'disable button 
+   bti_start_both_services.Disabled   = false                 'Disable button 
+
+  bti_start_both_services.blur                           'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Server Help Service
+'******************************************************************************
+' Displays help for services
+
+Function btf_help_service()
+ display_html_doc_page("start_run_as_service.html")
+ bti_help_service.blur                           'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Open MySQL Command Prompt
+'******************************************************************************
+' Opens a command window. Changes directory to MySQL binary folder
+' Sets command window background colour  
+
+Function btf_mysql_console()
+  Dim objShell
+  Set objShell = CreateObject("WScript.Shell")
+  objShell.Run ("%comspec% /T:B0 /K title UNIFORM SERVER MySQL Command prompt && cd " & US_MYSQL_BIN & "\")
+  Set objShell = Nothing 
+  bti_mysql_console.blur                           'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Server Status
+'******************************************************************************
+' Displays a list of current server status
+
+Function btf_server_status()
+
+  Dim objShell
+  Set objShell = CreateObject("WScript.Shell")
+  objShell.Run (US_UNI_CON & "\scripts\Server_Status.hta")
+  Set objShell = Nothing 
+ bti_server_status.blur                           'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Server Configuration
+'******************************************************************************
+' Displays server configuration menu
+
+Function btf_server_configuration()
+
+  Dim objShell
+  Set objShell = CreateObject("WScript.Shell")
+  objShell.Run (US_UNI_CON & "\config_menu\main_menu.hta")
+  Set objShell = Nothing 
+ bti_server_configuration.blur                    'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Multi Servers
+'******************************************************************************
+' Move server ports and rename execuitabls
+
+Function btf_multi_servers()
+
+  'Create object,run script passing parameter "uni_con_service.hta"
+  Dim objShell
+  Set objShell = CreateObject("WScript.Shell")
+
+  window.close()          'Close this application this will be restarted 
+                          'by the Multi_servers.hta application
+
+  objShell.Run (US_UNI_CON & "\scripts\Multi_servers.hta " & chr(34) & "uni_con_program.hta" & chr(34))
+  Set objShell = Nothing 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Apache Syntax Check
+'******************************************************************************
+' Performs Apche syntax check
+
+Function btf_apache_syntax_check()
+ us_apache_syntax_check()               'Run check result displayed in a pop-up
+ bti_apache_syntax_check.blur           'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' About
+'******************************************************************************
+' Displays About Information
+
+Function btf_about()
+ Dim str
+
+ str = ""
+ str = str & lang_about_popup_str1 & vbCRLF & vbCRLF
+ str = str & "People who have contributed to Uniform Server:" & vbCRLF
+ str = str & "Developers:" & vbCRLF
+ str = str & Space(4) & "Olajide Olaolorun (olajideolaolorun)" & vbCRLF
+ str = str & Space(4) & "Mike Gleaves (Ric)" & vbCRLF
+ str = str & Space(4) & "Bob Strand (BobS)" & vbCRLF
+
+ MsgBox str ,,lang_about_popup_title1
+
+ bti_about.blur                           'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' View www
+'******************************************************************************
+' View root folder www in default browser
+
+Function btf_view_www()
+ us_redirect("www")             'Open Page in browser
+ bti_view_www.blur              'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' View ssl
+'******************************************************************************
+' View root folder ssl in default browser
+
+Function btf_view_ssl()
+ us_redirect("ssl")               'Open Page in browser
+ bti_view_ssl.blur                'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' phpInfo
+'******************************************************************************
+' View phpInfo in default browser
+
+Function btf_view_phpinfo()
+ us_redirect("php_info")            'Open Page in browser
+ bti_view_phpinfo.blur              'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' phpMyAdmin
+'******************************************************************************
+' View phpMyAdmin in default browser
+
+Function btf_view_phpmyadmin()
+ us_redirect("phpmyadmin")              'Open Page in browser
+ bti_view_phpmyadmin.blur              'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+' Server Documentation
+'******************************************************************************
+' Displays HTML Server Documentation
+
+Function btf_server_documentation()
+
+ '--Display file in browser
+     display_html_doc_page("index.html")
+
+ bti_server_documentation.blur                     'Remove focus and double line 
+End Function
+'------------------------------------------------------------------------------
+
+
+'******************** End Script *****************
+</script>
+
+
+<link rel="stylesheet" type="text/css" href="css/main_style.css" media="screen" />
+<style type="text/css">
+</style>
+
+</head>
+<body>
+
+<fieldset>
+<legend id="legi_start_stop_services" >Start servers</legend>  
+
+<table   cellspacing="1" border="0">
+
+<tr>
+<td width="50%"><button id="bti_install_apache_service" onclick="btf_install_apache_service()" >Install Apache Service</button></td>
+<td width="20"><img  id="imgi_apache_install" src="images/red.gif"></td>
+<td width="50%"><button id="bti_start_apache_service" onclick="btf_start_apache_service()">Start Apache Service</button></td>
+<td width="20"><img  id="imgi_apache" src="images/red.gif"></td>
+</tr>
+
+
+<tr>
+<td><button  id="bti_install_mysql_service" onclick="btf_install_mysql_service()">Install MySQL Service </button></td>
+<td width="20"><img   id="imgi_mysql_install" src="images/red.gif"></td>
+<td><button   id="bti_start_mysql_service" onclick="btf_start_mysql_service()">Start MySQL Service</button></td>
+<td><img id="imgi_mysql" src="images/green.gif" ></td>
+</tr>
+
+<tr>
+<td colspan="3"><button class="common_button"   id="bti_start_both_services"   onclick="btf_start_both_services()" >Install/Run Apache and MySQL Service</button></td>
+<td ><button class="bt_help"  id="bti_help_service"   onclick="btf_help_service()" >!</button></td>
+</tr>
+</table>
+
+</fieldset>
+
+
+<fieldset>
+<legend id="legi_server_utilities" >Server Utilities</legend> 
+
+<table width="100%" border="0" cellspacing="1">
+
+<tr>
+<td width="50%"><button   id="bti_mysql_console" onclick="btf_mysql_console()">MySQL Console</button></td>
+<td><button class="common_button"   id="bti_view_www" onclick="btf_view_www()">View www</button></td>
+</tr>
+
+<tr>
+<td><button   id="bti_server_status" onclick="btf_server_status()">Server Status</button></td>
+<td><button class="common_button"   id="bti_view_ssl" onclick="btf_view_ssl()">View ssl</button></td>
+</tr>
+
+<tr>
+<td><button   id="bti_apache_syntax_check"      onclick="btf_apache_syntax_check()" >Apache Syntax Check</button></td>
+<td><button class="common_button"   id="bti_view_phpinfo" onclick="btf_view_phpinfo()">phpInfo</button></td>
+</tr>
+
+<tr>
+<td><button   id="bti_server_configuration" onclick="btf_server_configuration()">Server Configuration</button></td>
+<td><button class="common_button"   id="bti_view_phpmyadmin" onclick="btf_view_phpmyadmin()">phpMyAdmin</button></td>
+</tr>
+
+<tr>
+<td><button   id="bti_multi_servers"      onclick="btf_multi_servers()" >Multi Servers</button></td>
+<td><button   id="bti_server_documentation" onclick="btf_server_documentation()">Server Documentation</button></td>
+</tr>
+
+<tr>
+<td>
+
+
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+<form id="seli_form_lang">
+ <SELECT id="seli_select_lang" class="select_dd" onchange="fsel_update_lang()">
+ </SELECT>
+</form>
+
+
+
+</div>
+</td>
+<td><button   id="bti_about"      onclick="btf_about()" >About</button></td>
+</tr>
+
+</table>
+</fieldset>
+
+ </body>
+</html>
+ 

@@ -1,0 +1,794 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 600;                                // Set Application width
+   var hta_height = 335;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left,hta_top);                  // it into view.
+   }
+  </script>
+
+  <title>Basic PHP Configuration</title>
+ 
+  <hta:application
+   id="coral1_basic_php_configuration"
+   applicationname="coral1_basic_php_configuration" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 16-4-2011 V1.0
+ Option Explicit
+ Dim ServerName,ServerAdmin,DirectoryIndex,SSI,ServerSignature,Listen 'Global
+ Dim old_port  'Global
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ document.title = lang_php_page_title ' Set new page title 
+ us_init()                       'Check servers have moved and update accordingly
+ initial_text()                  'Set button and side text from lang file
+ get_display_current_config()    'Get data from config file
+ get_display_devlopment_config() 'Get data from config file
+ get_display_production_config() 'Get data from config file
+
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'Set side text from lang file
+'******************************************************************************
+Function initial_text()
+  Dim track,file_array,strLine
+
+  legi_php_cur.InnerHtml                      = lang_php_current_frame      'Current
+  legi_php_dev.InnerHtml                      = lang_php_development_frame  'Development
+  legi_php_pro.InnerHtml                      = lang_php_production_frame   'Production
+
+  td_php_cc_expose_php.InnerHtml              = lang_php_Show_PHP_in_server_signature_label 'Show PHP In Server Signature
+  td_php_cc_max_execution_time.InnerHtml      = lang_php_maximum_script_execute_time_label   'Maximum Script Execute Time (s.)
+  td_php_cc_memory_limit.InnerHtml            = lang_php_maximum_memory_amount_label         'Maximum Memory Amount (MB)
+  td_php_cc_display_errors.InnerHtml          = lang_php_display_errors_label                'Display Errors
+  td_php_cc_post_max_size.InnerHtml           = lang_php_maximum_post_size_label             'Maximum Post Size
+  td_php_cc_upload_max_filesize.InnerHtml     = lang_php_maximum_upload_size_label           'Maximum Upload Size
+  td_php_cc_short_open_tag.InnerHtml          = lang_php_short_open_tags_label               'Short Open Tags
+  td_php_cc_display_startup_errors.InnerHtml  = lang_php_display_startup_errors_label        'Display startup errors
+  td_php_cc_track_errors.InnerHtml            = lang_php_track_errors_label                  'Track errors
+  td_php_cc_html_errors.InnerHtml             = lang_php_html_errors_label                   'Html errors
+  td_php_cc_variables_order.InnerHtml         = lang_php_variables_order_label               'Variables order
+
+  bti_php_cur_update_config.value             = lang_php_update_bt  'Update
+  bti_php_dev_update_config.value             = lang_php_update_bt  'Update
+  bti_php_pro_update_config.value             = lang_php_update_bt  'Update
+  bti_php_help.value                          = lang_php_help_bt    'Help
+
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+'Get and display current configuration
+'******************************************************************************
+Function get_display_current_config()
+
+  Dim file_array,strLine
+
+  Dim expose_php,max_execution_time
+  Dim memory_limit,display_errors,post_max_size,upload_max_filesize
+  Dim short_open_tag,display_startup_errors,track_errors,html_errors,variables_order
+
+ '=== Get values from configuration file
+
+ file_array = us_get_file_as_array(USF_PHP_INI)       'Read PHP config file
+
+  For Each strLine in file_array                      'Scan array
+     strLine = trim(strLine)                          'Clean each line
+     strLine = Replace(strLine," ","")                'Remove spaces
+
+    If Instr(1,strLine,"expose_php=") = 1 Then                 'Look for string
+        strLine = Replace(strLine,"expose_php=","")            'Rmove
+        expose_php = trim(strLine)                             'Clean line     
+    End If
+
+    If Instr(1,strLine,"max_execution_time=") = 1 Then         'Look for string
+        strLine = Replace(strLine,"max_execution_time=","")    'Rmove
+        max_execution_time = trim(strLine)                     'Clean line     
+    End If
+
+    If Instr(1,strLine,"memory_limit=") = 1 Then               'Look for string
+        strLine = Replace(strLine,"memory_limit=","")          'Rmove
+        memory_limit = trim(strLine)                           'Clean line     
+    End If
+
+    If Instr(1,strLine,"display_errors=") = 1 Then             'Look for string
+        strLine = Replace(strLine,"display_errors=","")        'Rmove
+        display_errors = trim(strLine)                         'Clean line     
+    End If
+
+    If Instr(1,strLine,"post_max_size=") = 1 Then              'Look for string
+        strLine = Replace(strLine,"post_max_size=","")         'Rmove
+        post_max_size = trim(strLine)                          'Clean line     
+    End If
+
+    If Instr(1,strLine,"upload_max_filesize=") = 1 Then         'Look for string
+        strLine = Replace(strLine,"upload_max_filesize=","")    'Rmove
+        upload_max_filesize = trim(strLine)                     'Clean line     
+    End If
+
+    If Instr(1,strLine,"short_open_tag=") = 1 Then              'Look for string
+        strLine = Replace(strLine,"short_open_tag=","")         'Rmove
+        short_open_tag = trim(strLine)                          'Clean line     
+    End If
+
+    If Instr(1,strLine,"display_startup_errors=") = 1 Then      'Look for string
+        strLine = Replace(strLine,"display_startup_errors=","") 'Rmove
+        display_startup_errors = trim(strLine)                  'Clean line     
+    End If
+
+    If Instr(1,strLine,"track_errors=") = 1 Then                'Look for string
+        strLine = Replace(strLine,"track_errors=","")           'Rmove
+        track_errors = trim(strLine)                            'Clean line     
+    End If
+
+    If Instr(1,strLine,"html_errors=") = 1 Then                 'Look for string
+        strLine = Replace(strLine,"html_errors=","")            'Rmove
+        html_errors = trim(strLine)                             'Clean line     
+    End If
+
+    If Instr(1,strLine,"variables_order=") = 1 Then             'Look for string
+        strLine = Replace(strLine,"variables_order=","")        'Rmove
+        variables_order = trim(strLine)                         'Clean line     
+    End If
+
+   Next '--Get next line
+
+   '--Display to user
+   ip_php_cur_expose_php.value             = expose_php
+   ip_php_cur_max_execution_time.value     = max_execution_time
+   ip_php_cur_memory_limit.value           = memory_limit
+   ip_php_cur_display_errors.value         = display_errors
+   ip_php_cur_post_max_size.value          = post_max_size
+   ip_php_cur_upload_max_filesize.value    = upload_max_filesize
+   ip_php_cur_short_open_tag.value         = short_open_tag
+   ip_php_cur_display_startup_errors.value = display_startup_errors
+   ip_php_cur_track_errors.value           = track_errors
+   ip_php_cur_html_errors.value            = html_errors
+   ip_php_cur_variables_order.value        = variables_order
+
+End Function
+'==============================================================================
+
+'******************************************************************************
+'Get and display development configuration
+'******************************************************************************
+Function get_display_devlopment_config()
+
+  Dim file_array,strLine
+
+  Dim expose_php,max_execution_time
+  Dim memory_limit,display_errors,post_max_size,upload_max_filesize
+  Dim short_open_tag,display_startup_errors,track_errors,html_errors,variables_order
+
+ '=== Get values from configuration file
+
+ file_array = us_get_file_as_array(USF_PHP_INI_DEV)   'Read PHP config file
+
+  For Each strLine in file_array                      'Scan array
+     strLine = trim(strLine)                          'Clean each line
+     strLine = Replace(strLine," ","")                'Remove spaces
+
+    If Instr(1,strLine,"expose_php=") = 1 Then                 'Look for string
+        strLine = Replace(strLine,"expose_php=","")            'Rmove
+        expose_php = trim(strLine)                             'Clean line     
+    End If
+
+    If Instr(1,strLine,"max_execution_time=") = 1 Then         'Look for string
+        strLine = Replace(strLine,"max_execution_time=","")    'Rmove
+        max_execution_time = trim(strLine)                     'Clean line     
+    End If
+
+    If Instr(1,strLine,"memory_limit=") = 1 Then               'Look for string
+        strLine = Replace(strLine,"memory_limit=","")          'Rmove
+        memory_limit = trim(strLine)                           'Clean line     
+    End If
+
+    If Instr(1,strLine,"display_errors=") = 1 Then             'Look for string
+        strLine = Replace(strLine,"display_errors=","")        'Rmove
+        display_errors = trim(strLine)                         'Clean line     
+    End If
+
+    If Instr(1,strLine,"post_max_size=") = 1 Then              'Look for string
+        strLine = Replace(strLine,"post_max_size=","")         'Rmove
+        post_max_size = trim(strLine)                          'Clean line     
+    End If
+
+    If Instr(1,strLine,"upload_max_filesize=") = 1 Then         'Look for string
+        strLine = Replace(strLine,"upload_max_filesize=","")    'Rmove
+        upload_max_filesize = trim(strLine)                     'Clean line     
+    End If
+
+    If Instr(1,strLine,"short_open_tag=") = 1 Then              'Look for string
+        strLine = Replace(strLine,"short_open_tag=","")         'Rmove
+        short_open_tag = trim(strLine)                          'Clean line     
+    End If
+
+    If Instr(1,strLine,"display_startup_errors=") = 1 Then      'Look for string
+        strLine = Replace(strLine,"display_startup_errors=","") 'Rmove
+        display_startup_errors = trim(strLine)                  'Clean line     
+    End If
+
+    If Instr(1,strLine,"track_errors=") = 1 Then                'Look for string
+        strLine = Replace(strLine,"track_errors=","")           'Rmove
+        track_errors = trim(strLine)                            'Clean line     
+    End If
+
+    If Instr(1,strLine,"html_errors=") = 1 Then                 'Look for string
+        strLine = Replace(strLine,"html_errors=","")            'Rmove
+        html_errors = trim(strLine)                             'Clean line     
+    End If
+
+    If Instr(1,strLine,"variables_order=") = 1 Then             'Look for string
+        strLine = Replace(strLine,"variables_order=","")        'Rmove
+        variables_order = trim(strLine)                         'Clean line     
+    End If
+
+   Next '--Get next line
+
+   '--Display to user
+   ip_php_dev_expose_php.value             = expose_php
+   ip_php_dev_max_execution_time.value     = max_execution_time
+   ip_php_dev_memory_limit.value           = memory_limit
+   ip_php_dev_display_errors.value         = display_errors
+   ip_php_dev_post_max_size.value          = post_max_size
+   ip_php_dev_upload_max_filesize.value    = upload_max_filesize
+   ip_php_dev_short_open_tag.value         = short_open_tag
+   ip_php_dev_display_startup_errors.value = display_startup_errors
+   ip_php_dev_track_errors.value           = track_errors
+   ip_php_dev_html_errors.value            = html_errors
+   ip_php_dev_variables_order.value        = variables_order
+
+
+End Function
+'==============================================================================
+
+'******************************************************************************
+'Get and display production configuration
+'******************************************************************************
+Function get_display_production_config()
+
+  Dim file_array,strLine
+
+  Dim expose_php,max_execution_time
+  Dim memory_limit,display_errors,post_max_size,upload_max_filesize
+  Dim short_open_tag,display_startup_errors,track_errors,html_errors,variables_order
+
+ '=== Get values from configuration file
+
+ file_array = us_get_file_as_array(USF_PHP_INI_PROD)  'Read PHP config file
+
+  For Each strLine in file_array                      'Scan array
+     strLine = trim(strLine)                          'Clean each line
+     strLine = Replace(strLine," ","")                'Remove spaces
+
+    If Instr(1,strLine,"expose_php=") = 1 Then                 'Look for string
+        strLine = Replace(strLine,"expose_php=","")            'Rmove
+        expose_php = trim(strLine)                             'Clean line     
+    End If
+
+    If Instr(1,strLine,"max_execution_time=") = 1 Then         'Look for string
+        strLine = Replace(strLine,"max_execution_time=","")    'Rmove
+        max_execution_time = trim(strLine)                     'Clean line     
+    End If
+
+    If Instr(1,strLine,"memory_limit=") = 1 Then               'Look for string
+        strLine = Replace(strLine,"memory_limit=","")          'Rmove
+        memory_limit = trim(strLine)                           'Clean line     
+    End If
+
+    If Instr(1,strLine,"display_errors=") = 1 Then             'Look for string
+        strLine = Replace(strLine,"display_errors=","")        'Rmove
+        display_errors = trim(strLine)                         'Clean line     
+    End If
+
+    If Instr(1,strLine,"post_max_size=") = 1 Then              'Look for string
+        strLine = Replace(strLine,"post_max_size=","")         'Rmove
+        post_max_size = trim(strLine)                          'Clean line     
+    End If
+
+    If Instr(1,strLine,"upload_max_filesize=") = 1 Then         'Look for string
+        strLine = Replace(strLine,"upload_max_filesize=","")    'Rmove
+        upload_max_filesize = trim(strLine)                     'Clean line     
+    End If
+
+    If Instr(1,strLine,"short_open_tag=") = 1 Then              'Look for string
+        strLine = Replace(strLine,"short_open_tag=","")         'Rmove
+        short_open_tag = trim(strLine)                          'Clean line     
+    End If
+
+    If Instr(1,strLine,"display_startup_errors=") = 1 Then      'Look for string
+        strLine = Replace(strLine,"display_startup_errors=","") 'Rmove
+        display_startup_errors = trim(strLine)                  'Clean line     
+    End If
+
+    If Instr(1,strLine,"track_errors=") = 1 Then                'Look for string
+        strLine = Replace(strLine,"track_errors=","")           'Rmove
+        track_errors = trim(strLine)                            'Clean line     
+    End If
+
+    If Instr(1,strLine,"html_errors=") = 1 Then                 'Look for string
+        strLine = Replace(strLine,"html_errors=","")            'Rmove
+        html_errors = trim(strLine)                             'Clean line     
+    End If
+
+    If Instr(1,strLine,"variables_order=") = 1 Then             'Look for string
+        strLine = Replace(strLine,"variables_order=","")        'Rmove
+        variables_order = trim(strLine)                         'Clean line     
+    End If
+
+   Next '--Get next line
+
+   '--Display to user
+   ip_php_pro_expose_php.value             = expose_php
+   ip_php_pro_max_execution_time.value     = max_execution_time
+   ip_php_pro_memory_limit.value           = memory_limit
+   ip_php_pro_display_errors.value         = display_errors
+   ip_php_pro_post_max_size.value          = post_max_size
+   ip_php_pro_upload_max_filesize.value    = upload_max_filesize
+   ip_php_pro_short_open_tag.value         = short_open_tag
+   ip_php_pro_display_startup_errors.value = display_startup_errors
+   ip_php_pro_track_errors.value           = track_errors
+   ip_php_pro_html_errors.value            = html_errors
+   ip_php_pro_variables_order.value        = variables_order
+
+
+End Function
+'==============================================================================
+
+'=== Update current Configuration file ========================================
+Function btf_php_cur_update_config()
+  Dim file_array,strLine,i,str
+
+  Dim expose_php,max_execution_time
+  Dim memory_limit,display_errors,post_max_size,upload_max_filesize
+  Dim short_open_tag,display_startup_errors,track_errors,html_errors,variables_order
+
+  '--Get User Input
+   '--Display to user
+   expose_php             = ip_php_cur_expose_php.value
+   max_execution_time     = ip_php_cur_max_execution_time.value 
+   memory_limit           = ip_php_cur_memory_limit.value
+   display_errors         = ip_php_cur_display_errors.value
+   post_max_size          = ip_php_cur_post_max_size.value 
+   upload_max_filesize    = ip_php_cur_upload_max_filesize.value 
+   short_open_tag         = ip_php_cur_short_open_tag.value
+   display_startup_errors = ip_php_cur_display_startup_errors.value
+   track_errors           = ip_php_cur_track_errors.value
+   html_errors            = ip_php_cur_html_errors.value
+   variables_order        = ip_php_cur_variables_order.value 
+
+ '=== Get values from configuration file
+
+ file_array = us_get_file_as_array(USF_PHP_INI)       'Read PHP config file
+
+  For i = 0 To UBound(file_array)                   'Scan all lines in array
+     file_array(i) = trim(file_array(i))                          'Clean each line
+     file_array(i) = Replace(file_array(i)," ","")                'Remove spaces
+
+    If Instr(1,file_array(i),"expose_php=") = 1 Then                 'Look for string
+     file_array(i) = "expose_php = " &  expose_php                   'Create new line
+    End If
+
+    If Instr(1,file_array(i),"max_execution_time=") = 1 Then         'Look for string
+     file_array(i) = "max_execution_time = " &  max_execution_time   'Create new line
+    End If
+
+    If Instr(1,file_array(i),"memory_limit=") = 1 Then               'Look for string
+     file_array(i) = "memory_limit = " & memory_limit                'Create new line  
+    End If
+
+    If Instr(1,file_array(i),"display_errors=") = 1 Then             'Look for string
+     file_array(i) = "display_errors = " &  display_errors           'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"post_max_size=") = 1 Then              'Look for string
+     file_array(i) = "post_max_size = " & post_max_size              'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"upload_max_filesize=") = 1 Then         'Look for string
+     file_array(i) = "upload_max_filesize = " &  upload_max_filesize  'Create new line  
+    End If
+
+    If Instr(1,file_array(i),"short_open_tag=") = 1 Then              'Look for string
+     file_array(i) = "short_open_tag = " &  short_open_tag            'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"display_startup_errors=") = 1 Then           'Look for string
+     file_array(i) = "display_startup_errors = " & display_startup_errors  'Create new line   
+    End If
+
+    If Instr(1,file_array(i),"track_errors=") = 1 Then                'Look for string
+     file_array(i) = "track_errors = " & track_errors                 'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"html_errors=") = 1 Then                 'Look for string
+     file_array(i) = "html_errors = " & html_errors                   'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"variables_order=") = 1 Then             'Look for string
+     file_array(i) = "variables_order = " & variables_order           'Create new line   
+    End If
+
+   Next '--Get next line
+
+   call us_save_array_to_file(file_array,USF_PHP_INI) 'Save array 
+
+  MsgBox lang_php_current_config_str,,lang_php_current_config_title
+  bti_php_cur_update_config.blur
+End Function
+'==============================================================================
+
+'=== Update development Configuration file ====================================
+Function btf_php_dev_update_config()
+
+  Dim file_array,strLine,i,str
+
+  Dim expose_php,max_execution_time
+  Dim memory_limit,display_errors,post_max_size,upload_max_filesize
+  Dim short_open_tag,display_startup_errors,track_errors,html_errors,variables_order
+
+  '--Get User Input
+   '--Display to user
+   expose_php             = ip_php_dev_expose_php.value
+   max_execution_time     = ip_php_dev_max_execution_time.value 
+   memory_limit           = ip_php_dev_memory_limit.value
+   display_errors         = ip_php_dev_display_errors.value
+   post_max_size          = ip_php_dev_post_max_size.value 
+   upload_max_filesize    = ip_php_dev_upload_max_filesize.value 
+   short_open_tag         = ip_php_dev_short_open_tag.value
+   display_startup_errors = ip_php_dev_display_startup_errors.value
+   track_errors           = ip_php_dev_track_errors.value
+   html_errors            = ip_php_dev_html_errors.value
+   variables_order        = ip_php_dev_variables_order.value 
+
+ '=== Get values from configuration file
+
+ file_array = us_get_file_as_array(USF_PHP_INI_DEV)       'Read PHP config file
+
+  For i = 0 To UBound(file_array)                   'Scan all lines in array
+     file_array(i) = trim(file_array(i))                          'Clean each line
+     file_array(i) = Replace(file_array(i)," ","")                'Remove spaces
+
+    If Instr(1,file_array(i),"expose_php=") = 1 Then                 'Look for string
+     file_array(i) = "expose_php = " &  expose_php                   'Create new line
+    End If
+
+    If Instr(1,file_array(i),"max_execution_time=") = 1 Then         'Look for string
+     file_array(i) = "max_execution_time = " &  max_execution_time   'Create new line
+    End If
+
+    If Instr(1,file_array(i),"memory_limit=") = 1 Then               'Look for string
+     file_array(i) = "memory_limit = " & memory_limit                'Create new line  
+    End If
+
+    If Instr(1,file_array(i),"display_errors=") = 1 Then             'Look for string
+     file_array(i) = "display_errors = " &  display_errors           'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"post_max_size=") = 1 Then              'Look for string
+     file_array(i) = "post_max_size = " & post_max_size              'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"upload_max_filesize=") = 1 Then         'Look for string
+     file_array(i) = "upload_max_filesize = " &  upload_max_filesize  'Create new line  
+    End If
+
+    If Instr(1,file_array(i),"short_open_tag=") = 1 Then              'Look for string
+     file_array(i) = "short_open_tag = " &  short_open_tag            'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"display_startup_errors=") = 1 Then           'Look for string
+     file_array(i) = "display_startup_errors = " & display_startup_errors  'Create new line   
+    End If
+
+    If Instr(1,file_array(i),"track_errors=") = 1 Then                'Look for string
+     file_array(i) = "track_errors = " & track_errors                 'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"html_errors=") = 1 Then                 'Look for string
+     file_array(i) = "html_errors = " & html_errors                   'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"variables_order=") = 1 Then             'Look for string
+     file_array(i) = "variables_order = " & variables_order           'Create new line   
+    End If
+
+   Next '--Get next line
+
+   call us_save_array_to_file(file_array,USF_PHP_INI_DEV) 'Save array 
+
+  MsgBox lang_php_develpopment_config_str,,lang_php_develpopment_config_title
+  bti_php_dev_update_config.blur
+End Function
+'==============================================================================
+
+'=== Update production Configuration file =====================================
+Function btf_php_pro_update_config()
+
+  Dim file_array,strLine,i,str
+
+  Dim expose_php,max_execution_time
+  Dim memory_limit,display_errors,post_max_size,upload_max_filesize
+  Dim short_open_tag,display_startup_errors,track_errors,html_errors,variables_order
+
+  '--Get User Input
+   '--Display to user
+   expose_php             = ip_php_pro_expose_php.value
+   max_execution_time     = ip_php_pro_max_execution_time.value 
+   memory_limit           = ip_php_pro_memory_limit.value
+   display_errors         = ip_php_pro_display_errors.value
+   post_max_size          = ip_php_pro_post_max_size.value 
+   upload_max_filesize    = ip_php_pro_upload_max_filesize.value 
+   short_open_tag         = ip_php_pro_short_open_tag.value
+   display_startup_errors = ip_php_pro_display_startup_errors.value
+   track_errors           = ip_php_pro_track_errors.value
+   html_errors            = ip_php_pro_html_errors.value
+   variables_order        = ip_php_pro_variables_order.value 
+
+ '=== Get values from configuration file
+
+ file_array = us_get_file_as_array(USF_PHP_INI_PROD)       'Read PHP config file
+
+  For i = 0 To UBound(file_array)                   'Scan all lines in array
+     file_array(i) = trim(file_array(i))                          'Clean each line
+     file_array(i) = Replace(file_array(i)," ","")                'Remove spaces
+
+    If Instr(1,file_array(i),"expose_php=") = 1 Then                 'Look for string
+     file_array(i) = "expose_php = " &  expose_php                   'Create new line
+    End If
+
+    If Instr(1,file_array(i),"max_execution_time=") = 1 Then         'Look for string
+     file_array(i) = "max_execution_time = " &  max_execution_time   'Create new line
+    End If
+
+    If Instr(1,file_array(i),"memory_limit=") = 1 Then               'Look for string
+     file_array(i) = "memory_limit = " & memory_limit                'Create new line  
+    End If
+
+    If Instr(1,file_array(i),"display_errors=") = 1 Then             'Look for string
+     file_array(i) = "display_errors = " &  display_errors           'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"post_max_size=") = 1 Then              'Look for string
+     file_array(i) = "post_max_size = " & post_max_size              'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"upload_max_filesize=") = 1 Then         'Look for string
+     file_array(i) = "upload_max_filesize = " &  upload_max_filesize  'Create new line  
+    End If
+
+    If Instr(1,file_array(i),"short_open_tag=") = 1 Then              'Look for string
+     file_array(i) = "short_open_tag = " &  short_open_tag            'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"display_startup_errors=") = 1 Then           'Look for string
+     file_array(i) = "display_startup_errors = " & display_startup_errors  'Create new line   
+    End If
+
+    If Instr(1,file_array(i),"track_errors=") = 1 Then                'Look for string
+     file_array(i) = "track_errors = " & track_errors                 'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"html_errors=") = 1 Then                 'Look for string
+     file_array(i) = "html_errors = " & html_errors                   'Create new line 
+    End If
+
+    If Instr(1,file_array(i),"variables_order=") = 1 Then             'Look for string
+     file_array(i) = "variables_order = " & variables_order           'Create new line   
+    End If
+
+   Next '--Get next line
+
+  call us_save_array_to_file(file_array,USF_PHP_INI_PROD) 'Save array 
+
+  MsgBox lang_php_production_config_str,,lang_php_production_config_title
+  bti_php_pro_update_config.blur
+End Function
+'==============================================================================
+
+'=== Help short open tags =====================================================
+Function btf_short_open_tag_help()
+ display_html_doc_page("php_short_open_tags.html")
+ 
+  bti_short_open_tag_help.blur
+End Function
+'================================================================= End Help ===
+
+'=== Main Help  ===============================================================
+Function btf_php_help()
+  MsgBox lang_php_config_main_help_str,,lang_php_config_main_help_title
+  bti_php_help.blur
+End Function
+'============================================================ End Main Help ===
+
+</script>
+
+<style type="text/css">
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:97%;
+  height:12px;
+ background-color: #D1D1F5;
+}
+
+select{
+ background-color: #D1D1F5;
+  font-size:11px;
+  font-family:Verdana;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+
+
+</style>
+
+</head>
+
+<body>
+<table>
+
+<tr>
+<td width="110">
+ <fieldset>
+ <legend id="legi_php_cur" >Current</legend> 
+   <table >
+    <tr><td><input  id="ip_php_cur_expose_php" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_max_execution_time" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_memory_limit" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_display_errors" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_post_max_size" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_upload_max_filesize" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_short_open_tag" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_display_startup_errors" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_track_errors" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_html_errors" type="text"></td></tr>
+    <tr><td><input  id="ip_php_cur_variables_order" type="text"></td></tr>
+    <tr><td><button id="bti_php_cur_update_config" onclick="btf_php_cur_update_config()" >Update</button> </td></tr>
+   </table>
+ </fieldset>
+</td>
+
+<td width="110">
+ <fieldset>
+ <legend id="legi_php_dev" >Development</legend> 
+   <table >
+    <tr><td><input  id="ip_php_dev_expose_php" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_max_execution_time" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_memory_limit" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_display_errors" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_post_max_size" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_upload_max_filesize" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_short_open_tag" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_display_startup_errors" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_track_errors" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_html_errors" type="text"></td></tr>
+    <tr><td><input  id="ip_php_dev_variables_order" type="text"></td></tr>
+    <tr><td><button id="bti_php_dev_update_config" onclick="btf_php_dev_update_config()" >Update</button> </td></tr>
+   </table>
+ </fieldset>
+</td>
+
+<td >
+ <fieldset>
+ <legend id="legi_php_pro" >Production</legend> 
+   <table >
+    <tr>
+      <td><input  id="ip_php_pro_expose_php" type="text"></td>
+       <td>&nbsp;</td>
+      <td  id="td_php_cc_expose_php">Show PHP in server signature</td>
+    </tr>
+     <tr>
+      <td><input  id="ip_php_pro_max_execution_time" type="text"></td>
+       <td>&nbsp;</td>
+      <td  id="td_php_cc_max_execution_time">Max Script Execution Time (s.)</td>
+    </tr>
+    <tr>
+      <td><input  id="ip_php_pro_memory_limit" type="text"></td>
+       <td>&nbsp;</td>
+      <td  id="td_php_cc_memory_limit">Maximum Memory Amount (MB)</td>  
+    </tr>
+    <tr>
+      <td><input  id="ip_php_pro_display_errors" type="text"></td>
+       <td>&nbsp;</td>
+      <td  id="td_php_cc_display_errors">Display Errors</td>    
+    </tr>
+    <tr>
+       <td><input  id="ip_php_pro_post_max_size" type="text"></td>
+       <td>&nbsp;</td>
+       <td  id="td_php_cc_post_max_size">Maximum Post Size</td>  
+    </tr>
+    <tr>
+       <td><input  id="ip_php_pro_upload_max_filesize" type="text"></td>
+       <td>&nbsp;</td>
+       <td  id="td_php_cc_upload_max_filesize">Maximum Upload Size</td>
+    </tr>
+    <tr>
+       <td><input  id="ip_php_pro_short_open_tag" type="text"></td>
+       <td>&nbsp;</td>
+       <td><button   class="bt_help" id="bti_short_open_tag_help"   onclick="btf_short_open_tag_help()" >!</button>&nbsp;<span id="td_php_cc_short_open_tag">Short Open Tags</span></td>
+    </tr>
+    <tr>
+       <td><input  id="ip_php_pro_display_startup_errors" type="text"></td>
+       <td>&nbsp;</td>
+       <td  id="td_php_cc_display_startup_errors">Display startup errors</td>   
+    </tr>
+    <tr>
+       <td><input  id="ip_php_pro_track_errors" type="text"></td>
+       <td>&nbsp;</td>
+       <td  id="td_php_cc_track_errors">Track errors</td>
+    </tr>
+    <tr>
+       <td><input  id="ip_php_pro_html_errors" type="text"></td>
+       <td>&nbsp;</td>
+       <td  id="td_php_cc_html_errors">Html errors</td>
+    </tr>
+    <tr>
+      <td><input  id="ip_php_pro_variables_order" type="text"></td>
+       <td>&nbsp;</td>
+      <td  id="td_php_cc_variables_order">Variables order</td>
+      </tr>
+    <tr>
+      <td><button id="bti_php_pro_update_config" onclick="btf_php_pro_update_config()" >Update</button> </td>
+       <td>&nbsp;</td>
+      <td  ><button id="bti_php_help" onclick="btf_php_help()" >Help</button></td>
+    </tr>
+   </table>
+ </fieldset>
+</td>
+
+
+</tr>
+</table>
+
+</body>
+</html>
+ 

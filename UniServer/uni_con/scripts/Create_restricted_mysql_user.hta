@@ -1,0 +1,368 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 500;                                // Set Application width
+   var hta_height = 378;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left+10,hta_top+10);            // it into view.
+   }
+  </script>
+
+  <title>Create Restricted MySQL User</title>
+ 
+  <hta:application
+   id="coral1_create_restricted_user"
+   applicationname="coral1_create_restricted_user" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 23-4-2011 V1.0
+'MPG 12-1-2012 V1.1
+ Option Explicit
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+  document.title = lang_create_restricted_mysql_user_title ' Set new page title 
+
+ If Not us_mysql_running() Then            'Not running inform user and exit
+    Msgbox lang_create_mysql_popup_str4,,lang_create_mysql_popup_title4
+   window.close()
+ End If
+
+ us_init()                     'Check servers have moved and update accordingly
+ initial_text()                'Set button and side text from lang file
+ populate_select_box()         'Read databases from MySQL server and display
+
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'Set side text from lang file
+'******************************************************************************
+Function initial_text()
+  Dim track,file_array,strLine
+
+  legi_create.InnerHtml            = lang_cr_mysql_create_legend      'Create restricted User
+  legi_privileges.InnerHtml        = lang_cr_mysql_privileges_legend  'Privileges
+  legi_select_database.InnerHtml   = lang_cr_mysql_option_select_db   'Option select a database 
+
+  itd_user_name.InnerHtml          =  lang_cr_mysql_user_name         'User Name 
+  itd_password.InnerHtml           =  lang_cr_mysql_user_password     'Password
+  itd_database.InnerHtml           =  lang_cr_mysql_database_name     'Database
+  itd_select.InnerHtml             =  lang_cr_mysql_select            'Select
+  itd_insert.InnerHtml             =  lang_cr_mysql_insert            'Insert
+  itd_update.InnerHtml             =  lang_cr_mysql_update            'Update
+  itd_delete.InnerHtml             =  lang_cr_mysql_delete            'Delete
+  itd_create.InnerHtml             =  lang_cr_mysql_create            'Create
+  itd_drop.InnerHtml               =  lang_cr_mysql_drop              'Drop
+
+  itd_alter.InnerHtml              =  lang_cr_mysql_alter             'Alter
+  itd_index.InnerHtml              =  lang_cr_mysql_index             'Index
+
+  bti_cancel.value                 = lang_cr_mysql_cancel_bt          'Cancel
+  bti_create_user.value            = lang_cr_mysql_create_bt          'Create User
+  bti_help.value                   = lang_cr_mysql_help_bt            'Help
+
+End Function
+'------------------------------------------------------------------------------
+
+'=== Populate Select Box ======================================================
+'Read databases from MySQL server and display
+Function populate_select_box()
+  Dim database_array(),mysql_str,line,str
+  Redim database_array(0)
+
+ mysql_databases.options.length=0      'Clear all items in select box
+
+ mysql_str = "show databases;"         'Sql to list all databases
+
+ If us_mysql_batch(mysql_str,database_array) Then 'Database array returned
+
+   For each line in database_array             'Scan array
+     'Excluded the databases listed. We dont want a user to delete these
+     If not (line="Database" or line="information_schema" or line="mysql" or line="performance_schema" or line="phpmyadmin")  Then
+       call us_select_add_item(mysql_databases,line,line) 'Add item to select box
+     End If
+   Next
+ End If
+
+
+End Function
+'=== End Populate Select Box ===
+
+'=== Cancel ===================================================================
+Function btf_cancel()
+  mysql_databases.selectedIndex = -1 'Select none
+  ip_user_name.value     = ""        'Clear input boxes
+  ip_user_password.value = ""
+  ip_database_name.value = ""
+  bti_cancel.blur
+End Function
+'=============================================================== End Cancel ===
+
+'=== Create User ==============================================================
+'Create user and grant privileges to a database
+'General format (Note sequence of commas!)
+'query = "GRANT SELECT, INSERT, UPDATE, DELETE ON dbname.* TO username@127.0.0.1 IDENTIFIED BY 'password'";
+
+Function btf_create_user()
+  Dim database_array(),mysql_str,line,db_exists
+  Dim user_name,user_password,database_name
+  Dim priv_str,priv_select,priv_insert,priv_update,priv_delete,priv_create,priv_drop,priv_alter,priv_index
+  Redim database_array(0)
+
+  bti_create_user.blur
+
+  db_exists = false 'Assume db does not exist
+
+  user_name     = ip_user_name.value
+  user_password = ip_user_password.value
+  database_name = ip_database_name.value
+
+   If user_name = "" Then  'User name empty
+     Msgbox lang_cr_mysql_popup_str1 ,,lang_cr_mysql_popup_title1
+     Exit Function
+   End If 
+
+   If user_password = "" Then  'Password empty
+     Msgbox lang_cr_mysql_popup_str2 ,,lang_cr_mysql_popup_title2
+     Exit Function
+   End If 
+
+   If database_name = "" Then  'Database name empty
+     Msgbox lang_cr_mysql_popup_str3 ,,lang_cr_mysql_popup_title3
+     Exit Function
+   End If 
+
+   '---Id DB does not exist create it
+   If us_mysql_batch(mysql_str,database_array) Then 'Database array returned
+     For each line in database_array                'Scan array
+       If line=database_name  Then                  'Already created
+         db_exists = true                           'DB found
+       End If
+     Next
+     If Not db_exists Then                                 'DB not found
+       call us_create_mysql_database(database_name,False)  'Create new database
+       populate_select_box()                               'Re-populate db list        
+     End If
+   End If
+
+  '=== Get privilege ====
+  '-- Set initial privilege values
+  priv_select = ""
+  priv_insert = ""
+  priv_update = ""
+  priv_delete = ""
+  priv_create = ""
+  priv_drop   = ""
+  priv_alter  = ""
+  priv_index  = ""
+
+  '-- Get privilege values selected by user and set text accordingly
+  If chbi_select.checked Then         'Checked hence SELECT 
+    priv_select = "SELECT "           'Note space must be included
+  End if
+
+  If chbi_insert.checked Then         'Checked hence INSERT 
+    priv_insert = "INSERT "
+  End if
+
+  If chbi_update.checked Then         'Checked hence UPDATE 
+    priv_update = "UPDATE "
+  End if
+
+  If chbi_delete.checked Then         'Checked hence DELETE 
+    priv_delete = "DELETE "
+  End if
+
+  If chbi_create.checked Then         'Checked hence CREATE 
+    priv_create = "CREATE "
+  End if
+
+  If chbi_drop.checked Then           'Checked hence DROP 
+    priv_drop = "DROP "
+  End if
+
+  If chbi_alter.checked Then           'Checked hence ALTER 
+    priv_alter = "ALTER "
+  End if
+
+  If chbi_index.checked Then           'Checked hence INDEX 
+    priv_index = "INDEX "
+  End if
+
+  priv_str = trim(priv_select & priv_insert & priv_update & priv_delete & priv_create & priv_drop & priv_alter  & priv_index) 'Create string, trim left right spaces 
+  priv_str = Replace(priv_str," ",", ")                                                                                       'Replace space with comma space 
+
+  '--- Build Query string
+  mysql_str = ""  
+  mysql_str =  mysql_str & "GRANT " & priv_str & " "
+  mysql_str =  mysql_str & "ON " & database_name &".* TO "  
+  mysql_str =  mysql_str & user_name & "@127.0.0.1 "
+  mysql_str =  mysql_str & "IDENTIFIED BY '" & user_password &"';"
+
+  '--- Update MySQL server
+  call us_mysql_batch(mysql_str,database_array) 'Use dummy database_array
+
+  Msgbox lang_cr_mysql_popup_str4 ,,lang_cr_mysql_popup_title4
+
+End Function
+'========================================================== End Create User ===
+
+'=== Database selected ========================================================
+Function fsel_select_db()
+  ip_database_name.value = mysql_databases.value  'Display selcted value
+  mysql_databases.selectedIndex = -1              'De-select
+  id_sel_db.blur                                  'Remove select focus
+End Function
+'==================================================== End Database selected ===
+
+
+'=== Help =====================================================================
+Function btf_help()
+  MsgBox lang_cr_mysql_popup_help_str,,lang_cr_mysql_popup_help_title
+  bti_help.blur
+End Function
+'================================================================= End Help ===
+</script>
+
+<style type="text/css">
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:97%;
+  height:12px;
+ background-color: #D1D1F5;
+}
+
+select{
+ background-color: #D1D1F5;
+  font-size:11px;
+  font-family:Verdana;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+
+
+</style>
+
+</head>
+
+<body>
+<table border="0" cellspacing="6" >
+ <tr>
+  <td>
+   <fieldset>
+   <legend id="legi_create" >Create restricted User</legend> 
+   <table border="0" cellspacing="4">
+     <tr>
+       <td id="itd_user_name">User Name</td>
+       <td ><input   id="ip_user_name" type="text"></td>
+     </tr>
+     <tr>
+       <td id="itd_password" >Password </td>
+       <td ><input   id="ip_user_password" type="text"></td>
+      </tr>
+     <tr>
+       <td id="itd_database" >Database </td> 
+       <td ><input   id="ip_database_name" type="text"></td>
+     </tr>
+     <tr>
+        <td><button style="margin-top:78px" id="bti_cancel" onclick="btf_cancel()" >Cancel</button></td>
+        <td><button style="margin-top:78px" id="bti_create_user" onclick="btf_create_user()" >Create User</button></td>
+     </tr>
+
+   </table>
+   </fieldset>
+  </td>
+
+  <td>
+   <fieldset>
+   <legend id="legi_privileges" >Privileges</legend> 
+   <table border="0" cellspacing="4">
+     <tr><td width="20"> <input class="check_box" type="checkbox" checked="true" id="chbi_select" /></td> <td id="itd_select">Select</td> </tr>
+     <tr><td><input class="check_box" type="checkbox" checked="true" id="chbi_insert" /></td> <td id="itd_insert">Insert</td> </tr>
+     <tr><td><input class="check_box" type="checkbox" checked="true" id="chbi_update" /></td> <td id="itd_update">Update</td> </tr>
+     <tr><td><input class="check_box" type="checkbox" checked="true" id="chbi_delete" /></td> <td id="itd_delete">Delete</td> </tr>
+
+     <tr><td><input class="check_box" type="checkbox" checked="true" id="chbi_create" /></td> <td id="itd_create">Create</td> </tr>
+     <tr><td><input class="check_box" type="checkbox" checked="true" id="chbi_drop" />  </td> <td id="itd_drop">Drop</td> </tr>
+
+     <tr><td><input class="check_box" type="checkbox" checked="true" id="chbi_alter" /> </td> <td id="itd_alter">Alter</td> </tr>
+     <tr><td><input class="check_box" type="checkbox" checked="true" id="chbi_index" /> </td> <td id="itd_index">Index</td> </tr>
+
+     <tr><td colspan="2"><button id="bti_help" onclick="btf_help()" style="margin-top:8px" >Help</button></td></tr>
+   </table>
+   </fieldset>
+  </td>
+ </tr>
+</table>
+
+
+<table border="0">
+ <tr>
+  <td>
+    <fieldset>
+    <legend id="legi_select_database" >Option select a database</legend> 
+       <table cellspacing="6">
+       <tr><td>
+        <select size="6" name="mysql_databases" style="width:100%" onchange="fsel_select_db()" id="id_sel_db">
+        <option value="1">Option 1</option>
+        <option value="2">Option 2</option>
+        <option value="3">Option 3</option>
+        <option value="4">Option 4</option>
+        <option value="5">Option 5</option>
+        <option value="6">Option 6</option>
+        </select>          
+       </td></tr>
+       </table>
+    </fieldset>
+  </td>
+  </tr>
+</table>
+
+</body>
+</html>
+ 

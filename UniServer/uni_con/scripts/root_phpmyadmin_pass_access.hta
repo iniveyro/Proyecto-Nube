@@ -1,0 +1,455 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 350;                                // Set Application width
+   var hta_height = 245;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left,hta_top);                  // it into view.
+   }
+  </script>
+
+  <title>Passwords, .htaccess, local or remote access</title>
+ 
+  <hta:application
+   id="coral1_phpmyadmin_name_password"
+   applicationname="coral1_phpmyadmin_name_password" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 15-6-2011 V1.0
+ Option Explicit
+
+ Dim previous_radio_state        'Previous state of radio button
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ document.title = lang_passwords_page_title_phpmyadmin ' Set new page title 
+ 
+ us_init()                     'Check servers have moved and update accordingly
+
+ initial_text()                'Set button and side text from lang file
+ load_display_current_status() 'Load initial values. Displayed to user
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'Set side text from lang file
+'******************************************************************************
+Function initial_text()
+
+ legi_phpmyadmin_acc.InnerHtml               = lang_passwords_phpmyadmin_legend
+
+ td_phpmyadmin_access_local.InnerHtml           = lang_phpmyadmin_access_local             'Local
+ td_phpmyadmin_access_local_intranet.InnerHtml  = lang_phpmyadmin_access_local_intranet    'Intranet + passwords
+ td_phpmyadmin_access_internet.InnerHtml        = lang_phpmyadmin_access_internet          'Internet + passwords +ssl
+
+ legi_phpmyadmin_edit.InnerHtml                 = lang_passwords_phpmyadmin_legend2        'Option Edit Config files
+
+ bti_phpmyadmin_edit1.value                     = lang_passwords_edit1_phpmyadmin_bt       'View or Edit .htaccess
+ bti_phpmyadmin_edit2.value                     = lang_passwords_edit2_phpmyadmin_bt       'View or Edit config.inc.php
+ bti_phpmyadmin_browser.value                   = lang_passwords_test_phpmyadmin_bt        'Test
+
+End Function
+'------------------------------------------------------------------------------
+
+
+'=== Display Current status ===================================================
+
+Function load_display_current_status()
+  Dim file_array,strLine
+
+  '-- Reset radio buttons
+  group1(0).Checked = False                                 'Reset radio
+  group1(1).Checked = False                                 'Reset radio
+  group1(2).Checked = False                                 'Reset radio
+
+
+  '-- Get current status from htaccess file
+  file_array  = us_get_file_as_array(USF_PHPMYADMIN_HTACCESS)    'Read htaccess file
+  For Each strLine in file_array                                 'Scan array
+
+   '---Access
+    If InStr(1,strLine,"Allow from 127.0.0.1") = 1 Then          'Local access
+      group1(0).Checked = True                                   'Set radio Local
+      previous_radio_state = 0                                   'Set button tracker
+    End If
+
+    If InStr(1,strLine,"Allow from 127.0.0.1 192.168") = 1 Then  'Is local and Intranet access 
+      group1(1).Checked = True                                   'Set radio Intranet
+      previous_radio_state = 1
+    End If
+
+    If InStr(1,strLine,"#Allow from 127.0.0.1") = 1 Then         'Is Internet access enabled
+      group1(2).Checked = True                                   'Set radio Internet
+      previous_radio_state = 2
+    End If
+
+  Next  
+
+  '-- Button status
+  If us_apache_running() Then                 ' Apache running
+    bti_phpmyadmin_browser.Disabled  = False  'disable button
+  Else
+    bti_phpmyadmin_browser.Disabled  = True   'disable button
+  End If
+
+End Function
+'=============================================== End Display Current status ===
+
+'=== phpMyAdmin Access ========================================================
+Function  btf_access()
+  Dim file_array,i,str,strLine,ssl_port,server_name
+
+  ssl_port    = us_get_apache_ssl_port()        'Get port number from httpd-ssl.conf
+  server_name = us_get_server_name()            'Get server name from configuration file
+
+  '-- Can Internet access be set? Must have ssl enabled
+  If group1(2).Checked Then                                   'User selected Internet Access
+    If Not us_ssl_enabled() Then                              'SSL must be enabled
+       MsgBox lang_phpmyadmin_passwords_str1,,lang_phpmyadmin_passwords_title1
+'msgbox previous_radio_state
+       group1(previous_radio_state).Checked = True            'Restore previous button state
+     Exit Function                 'Give up
+    End If
+  End If
+
+  '=== UPDATE HTACCESS FILE ===
+
+  file_array  = us_get_file_as_array(USF_PHPMYADMIN_HTACCESS) 'Read htaccess file 
+
+  '--- Local Access
+   If group1(0).Checked Then                                  'Local Access
+   previous_radio_state = 0
+
+    '-- Access block
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"Order Deny,Allow") Then 
+          file_array(i) = "Order Deny,Allow"
+       End If
+       If InStr(file_array(i),"Deny from all") Then 
+          file_array(i) = "Deny from all"
+       End If
+       If InStr(file_array(i),"Allow from 127.0.0.1") Then 
+          file_array(i) = "Allow from 127.0.0.1"
+       End If
+       If InStr(file_array(i),"Allow from ::1") Then 
+          file_array(i) = "Allow from ::1"
+          Exit For
+       End If
+    Next 
+
+    '-- SSL block
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"RewriteCond %{SERVER_PORT}") Then 
+          file_array(i) = "#RewriteCond %{SERVER_PORT} !=" & ssl_port
+       End If
+       If InStr(file_array(i),"RewriteRule ^ https") Then 
+          file_array(i) = "#RewriteRule ^ https://" & server_name & ":" & ssl_port & "%{REQUEST_URI} [NS,R,L]"
+          Exit For
+       End If
+    Next
+
+   End If
+
+  '--- Local and Intranet Access
+   If group1(1).Checked Then                                  'Intranet Access
+   previous_radio_state = 1
+
+    '-- Access block
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"Order Deny,Allow") Then 
+          file_array(i) = "Order Deny,Allow"
+       End If
+       If InStr(file_array(i),"Deny from all") Then 
+          file_array(i) = "Deny from all"
+       End If
+       If InStr(file_array(i),"Allow from 127.0.0.1") Then 
+          file_array(i) = "Allow from 127.0.0.1 192.168"
+       End If
+       If InStr(file_array(i),"Allow from ::1") Then 
+          file_array(i) = "Allow from ::1"
+          Exit For
+       End If
+    Next 
+
+    '-- SSL block
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"RewriteCond %{SERVER_PORT}") Then 
+          file_array(i) = "#RewriteCond %{SERVER_PORT} !=" & ssl_port
+       End If
+       If InStr(file_array(i),"RewriteRule ^ https") Then 
+          file_array(i) = "#RewriteRule ^ https://" & server_name & ":" & ssl_port & "%{REQUEST_URI} [NS,R,L]"
+          Exit For
+       End If
+    Next 
+
+   End If
+
+  '--- Local, Intranet and Internet Access
+   If group1(2).Checked Then                                  'Internet Access
+   previous_radio_state = 2
+    '-- Access block
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"Order Deny,Allow") Then 
+          file_array(i) = "#Order Deny,Allow"
+       End If
+       If InStr(file_array(i),"Deny from all") Then 
+          file_array(i) = "#Deny from all"
+       End If
+       If InStr(file_array(i),"Allow from 127.0.0.1") Then 
+          file_array(i) = "#Allow from 127.0.0.1"
+       End If
+       If InStr(file_array(i),"Allow from ::1") Then 
+          file_array(i) = "#Allow from ::1"
+          Exit For
+       End If
+    Next
+
+    '-- SSL block
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"#RewriteCond %{SERVER_PORT}") Then 
+          file_array(i) = "RewriteCond %{SERVER_PORT} !=" & ssl_port
+       End If
+       If InStr(file_array(i),"#RewriteRule ^ https") Then 
+          file_array(i) = "RewriteRule ^ https://" & server_name & ":" & ssl_port & "%{REQUEST_URI} [NS,R,L]"
+          Exit For
+       End If
+    Next
+ 
+   End If
+
+   call us_save_array_to_file(file_array,USF_PHPMYADMIN_HTACCESS) 'Save array 
+
+  '=== END UPDATE HTACCESS FILE ===
+
+  '=== UPDATE PHPMYADMIN_CNF FILE ===
+
+  file_array  = us_get_file_as_array(USF_PHPMYADMIN_CNF) 'Read configuration file 
+
+  If group1(0).Checked Then  '=== 'Local Access - Automaticaly use root password
+
+    '--Update Authentication section
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"$cfg['Servers'][$i]['auth_type']") Then 
+          file_array(i) = "$cfg['Servers'][$i]['auth_type']       = 'config';  // Authentication method (config, http or cookie based)?"
+       End If
+
+       If InStr(file_array(i),"$cfg['Servers'][$i]['user']") Then 
+          file_array(i) = "$cfg['Servers'][$i]['user']            = 'root';    // MySQL user"
+       End If
+
+       If InStr(file_array(i),"$cfg['Servers'][$i]['password']") Then 
+          file_array(i) = "$cfg['Servers'][$i]['password']        = $password; // MySQL password (only needed with 'config' auth_type)"
+          Exit For 'Last line found
+       End If
+    Next
+
+  Else                       '=== Intranet/Internet Access - Force all users to use password
+
+    '--Update Authentication section
+    For i = 0 To UBound(file_array)                           'Scan all lines in array
+       If InStr(file_array(i),"$cfg['Servers'][$i]['auth_type']") Then 
+          file_array(i) = "$cfg['Servers'][$i]['auth_type']       = 'cookie';  // Authentication method (config, http or cookie based)?"
+       End If
+
+       If InStr(file_array(i),"$cfg['Servers'][$i]['user']") Then 
+          file_array(i) = "$cfg['Servers'][$i]['user']            = '';        // MySQL user"
+       End If
+
+       If InStr(file_array(i),"$cfg['Servers'][$i]['password']") Then 
+          file_array(i) = "$cfg['Servers'][$i]['password']        = '';        // MySQL password (only needed with 'config' auth_type)"
+          Exit For 'Last line found
+       End If
+    Next
+
+  End If 
+
+   call us_save_array_to_file(file_array,USF_PHPMYADMIN_CNF) 'Save array 
+
+  '=== UPDATE PHPMYADMIN_CNF FILE ===
+
+End Function
+'==================================================== End phpMyAdmin Access ===
+
+
+
+'=== View or Edit .htaccess ===================================================
+Function btf_phpmyadmin_edit1()
+  Dim objShell
+  Set objShell = CreateObject("WScript.Shell")
+  objShell.Run("notepad " & USF_PHPMYADMIN_HTACCESS) 'Open file
+  Set objShell = Nothing 
+  bti_phpmyadmin_edit1.blur        'Remove focus and double line
+End Function
+'=============================================== End View or Edit .htaccess ===
+
+'=== View or Edit config.inc.php ==============================================
+Function btf_phpmyadmin_edit2()
+  Dim objShell
+  Set objShell = CreateObject("WScript.Shell")
+  objShell.Run("notepad " & USF_PHPMYADMIN_CNF) 'Open file
+  Set objShell = Nothing 
+  bti_phpmyadmin_edit2.blur        'Remove focus and double line
+End Function
+'========================================== End View or Edit config.inc.php ===
+
+'=== View phpmyadmin in default browser =======================================
+Function btf_phpmyadmin_browser()
+ us_redirect("phpmyadmin")             'Open Page in browser
+ bti_phpmyadmin_browser.blur           'Remove focus and double line 
+End Function
+'=================================== End View phpmyadmin in default browser ===
+
+
+'=== HELP FUNCTIONS ===========================================================
+Function btf_help1()
+  display_html_doc_page("php_phpmyadmin.html")
+  bti_help1.blur        'Remove focus and double line
+End Function
+
+Function btf_help2()
+ MsgBox lang_phpmyadmin_passwords_help_str,,lang_phpmyadmin_passwords_help_title
+ bti_help2.blur        'Remove focus and double line
+End Function
+
+'======================================================= END HELP FUNCTIONS ===
+
+
+
+</script>
+
+<style type="text/css">
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+.pass{
+ font-size:11px;
+ font-family:Verdana;
+ width:97%;
+  height:12px;
+ background-color: #D1D1F5;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+
+
+</style>
+
+</head>
+
+<body>
+
+<table>
+<tr>
+<td>
+
+<fieldset>
+<legend id="legi_phpmyadmin_acc" >phpMyAdmin Access</legend> 
+
+<table border="0" cellspacing="3">
+  <tr>
+    <td> <input type="radio" name="group1" value="acc_local" onclick="btf_access()" ></td>
+    <td id="td_phpmyadmin_access_local" width="100%">Local</td>
+  </tr>
+  <tr>
+    <td> <input type="radio" name="group1" value="acc_local_intranet" onclick="btf_access()" ></td>
+    <td id="td_phpmyadmin_access_local_intranet" >Intranet + passwords </td>
+  </tr>
+  <tr>
+    <td> <input type="radio" name="group1" value="acc_internet" onclick="btf_access()" ></td>
+    <td id="td_phpmyadmin_access_internet">Internet + passwords + ssl</td>
+  </tr>
+</table>
+
+</fieldset>
+
+</td>
+</tr>
+</table>
+
+
+<table>
+<tr>
+<td>
+
+<fieldset>
+<legend id="legi_phpmyadmin_edit" >Option Edit Config files</legend> 
+
+<table border="0" cellspacing="4">
+  <tr>
+     <td><button   id="bti_phpmyadmin_edit1" onclick="btf_phpmyadmin_edit1()" >View or Edit .htaccess</button> </td>
+  </tr>
+  <tr>
+     <td><button   id="bti_phpmyadmin_edit2" onclick="btf_phpmyadmin_edit2()" >View or Edit config.inc.php</button> </td>
+  </tr>
+</table>
+
+</fieldset>
+
+</td>
+</tr>
+</table>
+
+
+
+<table>
+<tr>
+<td>
+
+<table border="0" cellspacing="4">
+
+<tr>
+    <td>&nbsp; </td> 
+    <td width="100%"> <button   id="bti_phpmyadmin_browser" onClick="btf_phpmyadmin_browser()" >Test</button></td>
+    <td> <button   class="bt_help" id="bti_help1"  onclick="btf_help1()" >!</button> </td>
+    <td> <button   class="bt_help" id="bti_help2"  onclick="btf_help2()" >?</button> </td>
+    <td>&nbsp; </td> 
+</tr>
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+ 

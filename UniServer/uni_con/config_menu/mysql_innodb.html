@@ -1,0 +1,194 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>Untitled Document</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'Globals
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ us_init()             'Check servers have moved and update accordingly
+
+ '--Set legend text
+ legi_mysql_innodb.InnerHtml   = lang_m1_mysql          'MySQL
+
+ '--Checkbox text
+
+ iText_innodb.InnerHtml        = lang_innodb_mysql_str1 'Enable InnoDB
+
+ set_button_status() 'Set initial button status
+End sub
+'------------------------------------------------------------------------------
+
+'=== Set button status ========================================================
+Function set_button_status()
+
+ Dim config_array,str_line,i
+
+ config_array = us_get_file_as_array(USF_MYSQL_INI) 'Read file into array 
+
+ chbi_innodb.checked = False                 'Assume disabled. Un-check box
+ 
+ For i=0 To UBound(config_array)             'Scan array
+   str_line = config_array(i)                'Read string
+    If InStr(str_line,"#skip-innodb") Then   'InnoDB disabled
+       chbi_innodb.checked = True            'Is enabled. Check checkbox    
+       Exit For                              'Nothing else to do
+    End If
+  Next
+
+End Function
+'==================================================== End set button status ===
+
+'=== Change State =============================================================
+Function btf_chb_innodb()
+ If chbi_innodb.checked Then 'Enable InnoDB
+   enable_innodb()
+ Else                        'Disable InnoDB
+   disable_innodb()
+ End If
+
+End Function
+'========================================================= End Change State ===
+
+'=== Enable InnoDB ============================================================
+Function enable_innodb()
+ Dim config_array,str_line,i
+
+ '-- Current config
+ config_array = us_get_file_as_array(USF_MYSQL_INI) 'Read file into array 
+
+ For i=0 To UBound(config_array)                     'Scan array
+   str_line = config_array(i)                        'Read string
+
+    If InStr(str_line,"skip-innodb") = 1 Then       'Is disabled
+      config_array(i) = "#skip-innodb"                'Enable save new line to array
+       Exit For                                      'Nothing else to do
+    End If
+ Next
+
+ call us_save_array_to_file(config_array,USF_MYSQL_INI) 'Save new file
+
+ '-- Small config
+ config_array = us_get_file_as_array(USF_SMALL_MY_INI) 'Read file into array 
+
+ For i=0 To UBound(config_array)                    'Scan array
+   str_line = config_array(i)                       'Read string
+
+    If InStr(str_line,"skip-innodb") = 1 Then       'Is disabled
+      config_array(i) = "#skip-innodb"              'Enable save new line to array
+       Exit For                                     'Nothing else to do
+    End If
+ Next
+
+ call us_save_array_to_file(config_array,USF_SMALL_MY_INI) 'Save new file
+
+ '-- Medium config
+ config_array = us_get_file_as_array(USF_MEDIUM_INI) 'Read file into array 
+
+ For i=0 To UBound(config_array)                     'Scan array
+   str_line = config_array(i)                        'Read string
+
+    If InStr(str_line,"skip-innodb") = 1 Then       'Is disabled
+      config_array(i) = "#skip-innodb"              'Enable save new line to array
+       Exit For                                     'Nothing else to do
+    End If
+ Next
+
+ call us_save_array_to_file(config_array,USF_MEDIUM_INI) 'Save new file
+
+End Function
+'======================================================== End Enable InnoDB ===
+
+'=== Disable InnoDB ===========================================================
+Function disable_innodb()
+
+ Dim config_array,str_line,i
+
+ '-- Current config
+ config_array = us_get_file_as_array(USF_MYSQL_INI) 'Read file into array 
+
+ For i=0 To UBound(config_array)                     'Scan array
+   str_line = config_array(i)                        'Read string
+
+    If InStr(str_line,"#skip-innodb") = 1 Then       'Is enabled
+      config_array(i) = "skip-innodb"              'Disable save new line to array
+       Exit For                                     'Nothing else to do
+    End If
+ Next
+
+ call us_save_array_to_file(config_array,USF_MYSQL_INI) 'Save new file
+
+ '-- Small config
+ config_array = us_get_file_as_array(USF_SMALL_MY_INI) 'Read file into array 
+
+ For i=0 To UBound(config_array)                     'Scan array
+   str_line = config_array(i)                        'Read string
+
+    If InStr(str_line,"#skip-innodb") = 1 Then       'Is enabled
+      config_array(i) = "skip-innodb"                'Disable save new line to array
+       Exit For                                      'Nothing else to do
+    End If
+ Next
+
+ call us_save_array_to_file(config_array,USF_SMALL_MY_INI) 'Save new file
+
+ '-- Medium config
+ config_array = us_get_file_as_array(USF_MEDIUM_INI) 'Read file into array 
+
+ For i=0 To UBound(config_array)                     'Scan array
+   str_line = config_array(i)                        'Read string
+
+    If InStr(str_line,"#skip-innodb") = 1 Then       'Is enabled
+      config_array(i) = "skip-innodb"                'Disable save new line to array
+       Exit For                                      'Nothing else to do
+    End If
+ Next
+
+ call us_save_array_to_file(config_array,USF_MEDIUM_INI) 'Save new file
+
+End Function
+'======================================================= End Disable InnoDB ===
+
+</script>
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<style type="text/css">
+
+td{
+  padding:4px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+.check_box{
+ width:auto;
+ background-color: #D1D1F5;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<fieldset>
+<legend id="legi_mysql_innodb" >MySQL</legend> 
+
+<table cellspacing="0" border="0" >
+<td><input  type="checkbox"  id="chbi_innodb" onclick="btf_chb_innodb()" /><span id="iText_innodb">Enable InnoDB</span></td>
+
+</table>
+
+
+</body>
+</html>

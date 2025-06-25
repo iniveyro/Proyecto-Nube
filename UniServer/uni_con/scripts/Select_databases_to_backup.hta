@@ -1,0 +1,349 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 500;                                // Set Application width
+   var hta_height = 260;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left+10,hta_top+10);                  // it into view.
+   }
+  </script>
+
+  <title>Select Databases To Backup</title>
+ 
+  <hta:application
+   id="coral1_select_dbs_to_backup"
+   applicationname="coral1_select_dbs_to_backup" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 25-4-2011 V1.0
+ Option Explicit
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ document.title = lang_db_select_title     ' Set new page title 
+ If Not us_mysql_running() Then            'Not running inform user and exit
+    Msgbox lang_create_mysql_popup_str4,,lang_create_mysql_popup_title4
+    window.close()
+ End If
+
+ us_init()                     'Check servers have moved and update accordingly
+ initial_text()                'Set button and side text from lang file
+ populate_mysql_select_box()   'Read databases from MySQL server and display
+ populate_db_list_select_box() 'Read current list of databases to backup
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'Set side text from lang file
+'******************************************************************************
+Function initial_text()
+  Dim track,file_array,strLine
+
+  legi_mysql_databases.InnerHtml        = lang_db_select_databases_legend   'MySQL Databases
+  legi_databases_to_back_up.InnerHtml   = lang_db_select_to_backup_legend   'Databases To Backup
+  itd_name_to_add.InnerHtml             = lang_db_select_database_to_backup 'Select database to backup
+  itd_delete_or_save.InnerHtml          = lang_db_select_delete_or_save     'Delete item or save to file
+
+  bti_clear.value                       = lang_db_select_clear_bt           'Clear
+  bti_add_database.value                = lang_db_select_add_bt             'Add >>
+  bti_delete_database.value             = lang_db_select_delete_bt          'Delete 
+  bti_help.value                        = lang_db_select_help_bt            'Help 
+
+End Function
+'------------------------------------------------------------------------------
+
+'=== Populate MySQL Select Box ================================================
+'Read databases from MySQL server and display
+Function populate_mysql_select_box()
+  Dim database_array(),mysql_str,line,str
+  Redim database_array(0)
+
+ mysql_databases.options.length=0                 'Clear all items in select box
+
+ mysql_str = "show databases;"                    'Sql to list all databases
+
+ If us_mysql_batch(mysql_str,database_array) Then 'Database array returned
+
+   For each line in database_array                'Scan array
+     'Excluded the databases listed. We dont want a user to delete these
+     If not (line="Database" or line="information_schema" or line="mysql" or line="performance_schema" or line="phpmyadmin")  Then
+       call us_select_add_item(mysql_databases,line,line) 'Add item to select box
+     End If
+   Next
+ End If
+
+End Function
+'============================================ End Populate MySQL Select Box ===
+
+'=== Populate DB list Select Box ==============================================
+'Read db list from dbs_to_backup.txt file
+Function populate_db_list_select_box()
+ Dim list_array,line 
+
+  list_array = us_get_file_as_array(USF_DBBACKUP_LIST)       'Read list of databases from file
+
+  databases_to_back_up.options.length=0                      'Clear all items in select box
+
+  For each line in list_array                                'Scan array
+     call us_select_add_item(databases_to_back_up,line,line) 'Add item to select box
+  Next
+
+End Function
+'========================================== End Populate DB list Select Box ===
+
+'=== Add selected item to list ================================================
+'Get selected item and add to list file.
+'Refresh dbs in right list
+Function btf_add_database()
+ Dim list_array,line 
+ Dim selected_item
+ Dim objFSO,objTextFile,ForAppending
+
+  ForAppending = 8 'ForAppending = 8 ForReading = 1, ForWriting = 2
+
+    bti_add_database.blur                   'Remove focus
+    selected_item = mysql_databases.value   'Get item selected
+
+    If selected_item = "" Then              'No item selected
+       Msgbox lang_db_select_popup_str1 ,,lang_db_select_popup_title1
+      Exit Function                         'Give up
+    End If
+
+    mysql_databases.selectedIndex = -1      'Remove selection highlight
+
+    '--Check duplicate
+    list_array = us_get_file_as_array(USF_DBBACKUP_LIST)       'Read list of databases from file
+
+    For each line in list_array                                'Scan array
+      If InStr(line,selected_item) Then                        'Duplicate found
+        Msgbox lang_db_select_popup_str2 ,,lang_db_select_popup_title2
+        Exit function                                          'Give up
+      End If
+    Next
+
+    '--Append selection to file
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    Set objTextFile = objFSO.OpenTextFile (USF_DBBACKUP_LIST, ForAppending, True)
+    objTextFile.WriteLine(selected_item)
+    objTextFile.Close
+    Set objTextFile = Nothing 
+
+   '--Update list
+   populate_db_list_select_box() 'Display new value
+
+End Function
+'============================================ End Add selected item to list ===
+
+'=== Delete database from list ================================================
+Function btf_delete_database()
+  Dim selected_item,objOption,i,str,objFSO,objTextFile
+
+  bti_delete_database.blur                     'Remove focus
+  selected_item = databases_to_back_up.value   'Get item selected
+
+  '--Need item to delete
+  If selected_item = "" Then              'No item selected
+    Msgbox lang_db_select_popup_str1 ,,lang_db_select_popup_title1
+    Exit Function                         'Give up
+  End If
+
+
+  '--Delete item selcted from list
+    For Each objOption in databases_to_back_up.Options 'Scan all options
+      If objOption.Value = selected_item Then          'Is option value that selected
+        objOption.RemoveNode                           'Delete by removing its node
+        Exit For                                       'Nothing else to do
+      End If
+    Next 
+
+
+  '--Get all elements in list box
+  'For i = 0 to (databases_to_back_up.Options.Length - 1)
+  '  str = str & databases_to_back_up.Options(i).Value & vbcrlf
+  'Next
+  'Msgbox str
+
+  '--Write list box to file
+  Set objFSO = CreateObject("Scripting.FileSystemObject")
+  Set objTextFile = objFSO.OpenTextFile (USF_DBBACKUP_LIST,2,True) '2 = Writing
+ 
+  for i = 0 to (databases_to_back_up.Options.Length - 1)           'Scan option array
+     objTextFile.WriteLine(databases_to_back_up.Options(i).Value)  'Save line to file with return at end
+  Next
+
+  objTextFile.Close                                                'Close file
+  Set objFSO      = Nothing 
+  Set objTextFile = Nothing 
+
+  '--End Write list box to file
+
+  'databases_to_back_up.selectedIndex = -1 'Select none
+
+   '--Update list
+   populate_db_list_select_box() 'Display new value
+
+End Function
+'============================================ End Delete database from list ===
+
+'=== Clear both ===============================================================
+Function btf_clear()
+  mysql_databases.selectedIndex = -1      'Select none
+  databases_to_back_up.selectedIndex = -1 'Select none
+  bti_clear.blur
+End Function
+'=========================================================== End Clear both ===
+
+'=== Help =====================================================================
+Function btf_help()
+  Msgbox lang_db_select_popup_help_str,,lang_db_select_popup_help_title
+  bti_help.blur
+End Function
+'================================================================= End Help ===
+
+</script>
+
+<style type="text/css">
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:97%;
+  height:12px;
+ background-color: #D1D1F5;
+}
+
+select{
+ background-color: #D1D1F5;
+  font-size:11px;
+  font-family:Verdana;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+
+
+</style>
+
+</head>
+
+<body>
+<table>
+<tr>
+
+
+<td width="50%">
+
+<fieldset>
+<legend id="legi_mysql_databases" >MySQL Databases</legend> 
+  <table cellspacing="6">
+  <tr><td id="itd_name_to_add">Select database to backup</td></tr>
+  <tr><td>
+
+    <select size="10" name="mysql_databases" style="width:100%" >
+     <option value="1">Option 1</option>
+     <option value="2">Option 2</option>
+     <option value="3">Option 3</option>
+     <option value="4">Option 4</option>
+     <option value="5">Option 5</option>
+     <option value="6">Option 6</option>
+
+    </select>
+
+   </td></tr>
+  </table>
+
+
+  <table>
+    <tr>
+     <td><button id="bti_clear" onclick="btf_clear()" >Clear</button></td>
+     <td><button id="bti_add_database" onclick="btf_add_database()" >Add >></button></td>
+    </tr>
+  </table>
+
+</fieldset>
+
+
+</td>
+
+
+
+<td>
+<fieldset>
+<legend id="legi_databases_to_back_up" >Databases To Backup</legend> 
+  <table cellspacing="6">
+  <tr><td id="itd_delete_or_save">Delete item or save to file</td></tr>
+  <tr><td>
+
+    <select size="10" name="databases_to_back_up" style="width:100%" >
+     <option value="1">Option 1</option>
+     <option value="2">Option 2</option>
+     <option value="3">Option 3</option>
+     <option value="4">Option 4</option>
+     <option value="5">Option 5</option>
+     <option value="6">Option 6</option>
+
+    </select>
+    </td></tr>
+  </table>
+
+  <table>
+    <tr>
+     <td><button id="bti_delete_database" onclick="btf_delete_database()" >Delete</button></td>
+     <td><button id="bti_help" onclick="btf_help()" >Help</button></td>
+    </tr>
+  </table>
+
+
+</fieldset>
+
+
+
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+ 

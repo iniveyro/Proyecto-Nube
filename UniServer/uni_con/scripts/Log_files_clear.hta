@@ -1,0 +1,438 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 350;                                // Set Application width
+   var hta_height = 300;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left+10,hta_top+10);            // it into view.
+   }
+  </script>
+
+  <title>Log Files Clear</title>
+ 
+  <hta:application
+   id="coral1_log_files"
+   applicationname="apache_log_files" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 23-5-2011 V1.0
+ Option Explicit
+
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+  document.title = lang_logs_title ' Clear Server Logs 
+
+ us_init()                     'Check servers have moved and update accordingly
+ initial_text()                'Set button and side text from lang file
+ initial_settings()            'Set initial values displayed
+
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'******************************************************************************
+Function initial_text()
+
+  legi_select_log.InnerHtml       = lang_logs_frame             'Select Log
+
+  td_apache_error.InnerHtml       = lang_log_apache_error       'Apache Error Log
+  td_apache_access.InnerHtml      = lang_log_apache_access      'Apache Access Log
+  td_ssl_apache_error.InnerHtml   = lang_log_ssl_apache_error   'Apache SSL Error Log
+  td_ssl_apache_access.InnerHtml  = lang_log_ssl_apache_access  'Apache SSL Access Log
+
+  td_mysql_error.InnerHtml        = lang_log_mysql_error        'MySQL Error Log
+  td_cron.InnerHtml               = lang_log_cron               'Cron Log
+  td_DTDNS.InnerHtml              = lang_log_DTDNS              'DTDNS Log
+  td_dbbackup.InnerHtml           = lang_log_dbbackup           'Database Backup Log
+
+  bti_select_all.value            = lang_log_select_all_bt      'Select all
+  bti_clear_selected.value        = lang_log_clear_bt           'Clear Selected
+
+End Function
+'------------------------------------------------------------------------------
+
+'=== Set initial settings =====================================================
+'Used by onload and cancel buttons
+
+Function initial_settings()
+Dim objFSO,objFile
+
+ Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+ '--Apache Error
+ If us_file_exists(USF_APACHE_ERROR_LOG ) Then
+   Set objFile = objFSO.GetFile(USF_APACHE_ERROR_LOG)
+   tx_apache_error.value = objFile.Size
+   Set objFile = Nothing 
+ Else
+   ch_apache_error.Disabled        = True   'disable check box
+ End If
+
+ '--Apache Access
+ If us_file_exists(USF_APACHE_ACCESS_LOG) Then
+   Set objFile = objFSO.GetFile(USF_APACHE_ACCESS_LOG)
+   tx_apache_access.value = objFile.Size
+   Set objFile = Nothing 
+ Else
+   ch_apache_access.Disabled        = True   'disable check box
+ End If
+
+ '--Apache SSL error
+ If us_file_exists(USF_APACHE_SSL_ERROR_LOG) Then
+   Set objFile = objFSO.GetFile(USF_APACHE_SSL_ERROR_LOG)
+   tx_ssl_apache_error.value = objFile.Size
+   Set objFile = Nothing 
+ Else
+   ch_ssl_apache_error.Disabled        = True   'disable check box
+ End If
+
+ '--Apache SSL access
+ If us_file_exists(USF_APACHE_SSL_ACCESS_LOG) Then
+   Set objFile = objFSO.GetFile(USF_APACHE_SSL_ERROR_LOG)
+   tx_ssl_apache_access.value = objFile.Size
+   Set objFile = Nothing 
+ Else
+   ch_ssl_apache_access.Disabled        = True   'disable check box
+ End If
+
+ '--MySQL Error
+ If us_file_exists(USF_MYSQL_ERROR_LOG) Then
+   Set objFile = objFSO.GetFile(USF_MYSQL_ERROR_LOG)
+   tx_mysql_error.value = objFile.Size
+   Set objFile = Nothing 
+ Else
+   ch_mysql_error.Disabled        = True   'disable check box
+ End If
+
+ '--Cron
+ If us_file_exists(USF_CRON_LOG) Then
+   Set objFile = objFSO.GetFile(USF_CRON_LOG)
+   tx_cron.value = objFile.Size
+   Set objFile = Nothing 
+ Else
+    ch_cron.Disabled        = True   'disable check box
+ End If
+
+ '--DTDNS
+ If us_file_exists(USF_DTDNS_LOG) Then
+   Set objFile = objFSO.GetFile(USF_DTDNS_LOG)
+   tx_DTDNS.value = objFile.Size
+   Set objFile = Nothing 
+ Else
+   ch_DTDNS.Disabled        = True   'disable check box
+ End If
+
+ '--DB backup
+ If us_file_exists(USF_DBBACKUP_LOG) Then
+   Set objFile = objFSO.GetFile(USF_DBBACKUP_LOG)
+   tx_dbbackup.value = objFile.Size
+   Set objFile = Nothing 
+ Else
+   ch_dbbackup.Disabled        = True   'disable check box
+ End If
+
+  ch_apache_error.checked = False
+  ch_apache_access.checked = False
+  ch_ssl_apache_error.checked = False
+  ch_ssl_apache_access.checked = False
+  ch_mysql_error.checked = False
+  ch_cron.checked = False
+  ch_DTDNS.checked = False
+  ch_dbbackup.checked = False
+
+  Set objFSO = Nothing 
+
+End Function
+'================================================= End Set initial settings ===
+
+'=== Select All ===============================================================
+'Select a log file if it exists
+
+Function btf_select_all()
+
+ '--Apache Error
+ If us_file_exists(USF_APACHE_ERROR_LOG ) Then
+  ch_apache_error.checked = True
+ End If
+
+ '--Apache Access
+ If us_file_exists(USF_APACHE_ACCESS_LOG) Then
+  ch_apache_access.checked = True
+ End If
+
+ '--Apache SSL error
+ If us_file_exists(USF_APACHE_SSL_ERROR_LOG) Then
+  ch_ssl_apache_error.checked = True
+ End If
+
+ '--Apache SSL access
+ If us_file_exists(USF_APACHE_SSL_ACCESS_LOG) Then
+  ch_ssl_apache_access.checked = True
+ End If
+
+ '--MySQL Error
+ If us_file_exists(USF_MYSQL_ERROR_LOG) Then
+  ch_mysql_error.checked = True
+ End If
+
+ '--Cron
+ If us_file_exists(USF_CRON_LOG) Then
+  ch_cron.checked = True
+ End If
+
+ '--DTDNS
+ If us_file_exists(USF_DTDNS_LOG) Then
+  ch_DTDNS.checked = True
+ End If
+
+ '--DB backup
+ If us_file_exists(USF_DBBACKUP_LOG) Then
+  ch_dbbackup.checked = True
+ End If
+
+  bti_select_all.blur
+End Function
+'=========================================================== End Select All ===
+
+'=== Clear selected ==========================================================
+Function btf_clear_selected()
+Dim objFSO,objFile,Apache_running,MySQL_running
+Const ForReading = 1, ForWriting = 2
+
+ Apache_running = us_apache_running()
+ MySQL_running  = us_mysql_running()
+
+ Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+ If Apache_running Then
+     Msgbox lang_log_popup_str1,,lang_log_popup_title1
+ Else
+
+ '--Apache Error
+   If us_file_exists(USF_APACHE_ERROR_LOG ) And ch_apache_error.checked Then
+     Set objFile = objFSO.OpenTextFile(USF_APACHE_ERROR_LOG, ForWriting, True)
+     objFile.close
+     Set objFile = Nothing
+   End If
+
+ '--Apache Access
+   If us_file_exists(USF_APACHE_ACCESS_LOG ) And ch_apache_access.checked Then
+     Set objFile = objFSO.OpenTextFile(USF_APACHE_ACCESS_LOG, ForWriting, True)
+     objFile.close
+     Set objFile = Nothing
+   End If
+
+ '--Apache SSL error
+   If us_file_exists(USF_APACHE_SSL_ERROR_LOG) And ch_ssl_apache_error.checked Then
+     Set objFile = objFSO.OpenTextFile(USF_APACHE_SSL_ERROR_LOG, ForWriting, True)
+     objFile.close
+     Set objFile = Nothing
+   End If
+
+ '--Apache SSL access
+   If us_file_exists(USF_APACHE_SSL_ACCESS_LOG) And ch_ssl_apache_access.checked Then
+     Set objFile = objFSO.OpenTextFile(USF_APACHE_SSL_ACCESS_LOG, ForWriting, True)
+     objFile.close
+     Set objFile = Nothing
+   End If
+
+ End If 'Apache block
+
+ '--MySQL Error
+ If MySQL_running Then
+     Msgbox lang_log_popup_str2,,lang_log_popup_title2
+ Else
+
+   If us_file_exists(USF_MYSQL_ERROR_LOG) And ch_mysql_error.checked Then
+     Set objFile = objFSO.OpenTextFile(USF_MYSQL_ERROR_LOG, ForWriting, True)
+     objFile.close
+     Set objFile = Nothing
+   End If
+
+ End If 'MySQL block
+
+ '--Cron
+ If us_file_exists(USF_CRON_LOG) And ch_cron.checked Then
+   Set objFile = objFSO.OpenTextFile(USF_CRON_LOG, ForWriting, True)
+   objFile.close
+   Set objFile = Nothing
+ End If
+
+ '--DTDNS
+ If us_file_exists(USF_DTDNS_LOG) And ch_DTDNS.checked Then
+   Set objFile = objFSO.OpenTextFile(USF_DTDNS_LOG, ForWriting, True)
+   objFile.close
+   Set objFile = Nothing
+ End If
+
+ '--DB backup
+ If us_file_exists(USF_DBBACKUP_LOG) And ch_dbbackup.checked  Then
+   Set objFile = objFSO.OpenTextFile(USF_DBBACKUP_LOG, ForWriting, True)
+   objFile.close
+   Set objFile = Nothing
+ End If
+
+ Set objFSO = Nothing 
+
+initial_settings()
+
+  bti_clear_selected.blur
+End Function
+'====================================================== End Clear selected ===
+
+'=== Help =====================================================================
+Function f_help_clear()
+  Msgbox lang_log_popup_str3,,lang_log_popup_title3
+  b_help_clear.blur
+End Function
+'================================================================= End Help ===
+
+</script>
+
+<style type="text/css">
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+.file_size{
+ font-size:11px;
+ font-family:Verdana;
+ width:100px;
+ height:12px;
+ background-color: #D1D1F5;
+}
+
+select{
+ background-color: #D1D1F5;
+  font-size:11px;
+  font-family:Verdana;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+
+</style>
+
+</head>
+
+<body>
+<table border="0" cellspacing="6" >
+ <tr>
+  <td>
+   <fieldset>
+ 
+  <legend id="legi_select_log" >Select Log</legend> 
+   <table border="0" cellspacing="4">
+ 
+     <tr >
+       <td ><input type="text"     name="tx_apache_error"  value=" " class="file_size" ></td>
+       <td ><input type="checkbox" name="ch_apache_error" value="1"></td>
+       <td style="width:100%" id="td_apache_error" >Apache Error Log</td>
+     </tr>
+
+     <tr >
+       <td ><input type="text"     name="tx_apache_access"  value=" " class="file_size" ></td>
+       <td ><input type="checkbox" name="ch_apache_access" value="1"></td>
+       <td style="width:100%" id="td_apache_access" >Apache Access Log</td>
+     </tr>
+
+     <tr >
+       <td ><input type="text"     name="tx_ssl_apache_error"  value=" " class="file_size" ></td>
+       <td ><input type="checkbox" name="ch_ssl_apache_error" value="1"></td>
+       <td style="width:100%" id="td_ssl_apache_error" >Apache SSL Error Log</td>
+     </tr>
+
+     <tr >
+       <td ><input type="text"     name="tx_ssl_apache_access"  value=" " class="file_size" ></td>
+       <td ><input type="checkbox" name="ch_ssl_apache_access" value="1"></td>
+       <td style="width:100%" id="td_ssl_apache_access" >Apache SSL Access Log</td>
+     </tr>
+
+
+
+     <tr >
+       <td ><input type="text"     name="tx_mysql_error"  value=" " class="file_size" ></td>
+       <td ><input type="checkbox" name="ch_mysql_error" value="1"></td>
+       <td style="width:100%" id="td_mysql_error" >MySQL Error Log</td>
+     </tr>
+
+     <tr >
+       <td ><input type="text"     name="tx_cron"  value=" " class="file_size" ></td>
+       <td ><input type="checkbox" name="ch_cron" value="1"></td>
+       <td style="width:100%" id="td_cron" >Cron Log</td>
+     </tr>
+
+     <tr >
+       <td ><input type="text"     name="tx_DTDNS"  value=" " class="file_size" ></td>
+       <td ><input type="checkbox" name="ch_DTDNS" value="1"></td>
+       <td style="width:100%" id="td_DTDNS" >DTDNS Log</td>
+     </tr>
+
+     <tr >
+       <td ><input type="text"     name="tx_dbbackup"  value=" " class="file_size" ></td>
+       <td ><input type="checkbox" name="ch_dbbackup" ></td>
+       <td style="width:100%" id="td_dbbackup" >Database Backup Log</td>
+     </tr>
+
+
+   </table>
+
+    </fieldset>
+  </td>
+ </tr>
+
+<tr><td>
+
+  <table cellspacing="3" border="0">
+   <tr>
+    <td style="width:45%"><button   id="bti_select_all"      onclick="btf_select_all()" >Select All</button></td>
+    <td>            <button   id="bti_clear_selected"  onclick="btf_clear_selected()" >Clear Selected</button></td>
+    <td style="width:16px"> <button   id="b_help_clear"        onclick="f_help_clear()" >?</button></td>
+   </tr>
+  </table>
+
+</td></tr>
+</table>
+
+</body>
+</html>
+ 

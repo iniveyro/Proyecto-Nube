@@ -1,0 +1,213 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>Untitled Document</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+ 'MPG 21-4-2011 V1.0
+ '--Globals
+ Dim id_account
+
+ Set objShell = CreateObject("WScript.Shell")
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ us_init()             'Check servers have moved and update accordingly
+ initial_text()        'Set button and side text from lang file
+ 
+ '---Set button status
+
+ If Not us_file_exists(USF_PERL_EXE) Then              ' Perl not installed
+   bti_perl_force_update.Disabled      = True          'disable button 
+   bti_perl_convert_win2nix.Disabled   = True          'disable button
+   bti_perl_run_test_script.Disabled   = True          'disable button
+   Msgbox lang_perl_popup_str1,,lang_perl_popup_title1 'Perl not installed"
+ End If
+
+End sub
+
+'******************************************************************************
+'Set initial button text and title. Text from language configuration file
+'******************************************************************************
+Function initial_text()
+
+  legi_perl_control.InnerHtml     =  lang_perl_control_legend    'Perl control panel
+  bti_perl_force_update.value     =  lang_perl_force_update      'Force Shebang Update
+  bti_perl_convert_win2nix.value  =  lang_perl_convert_win2nix   'Convert Win2Nix
+  bti_perl_run_test_script.value  =  lang_perl_run_test_script   'Run Test Script
+
+End Function
+'------------------------------------------------------------------------------
+
+'=== Force Shebang Update =====================================================
+Function btf_perl_force_update()
+
+ call us_shebang_update (US_CGI_BIN)                 'Update shebang
+ Msgbox lang_perl_popup_str2,,lang_perl_popup_title2 'Perl Shebang Updated 
+ bti_perl_force_update.blur                          'Remove focus 
+
+End Function
+'================================================= End Force Shebang Update ===
+
+
+'=== Convert Win2Nix ==========================================================
+Function btf_perl_convert_win2nix()
+ Dim objFSO
+
+   '-- Copy folder tree to cgi-unix
+   set objFSO=CreateObject("Scripting.FileSystemObject")
+   If objFSO.FolderExists(US_CGI_BIN) Then
+     objFSO.CopyFolder US_CGI_BIN, US_CGI_BIN_UNIX
+   End If
+
+   us_shebang_update_unix(US_CGI_BIN_UNIX) 'Update to Unix shebang
+   us_unix_end_of_line(US_CGI_BIN_UNIX)    'Change end of lines
+
+   bti_perl_convert_win2nix.blur                   'Remove focus 
+
+End Function
+'====================================================== End Convert Win2Nix ===
+
+
+'=== Unix end of lines ========================================================
+'Changes CR+LF to LF Unix style
+Function us_unix_end_of_line(startDirectory)
+   Dim fso, folder, file ,sub_folder,fileExt1,fileExt2
+   Dim filestreamOUT,i
+   Dim file_array
+   Const ForReading = 1
+   Const ForWriting = 2
+   Dim objFSO,objFile,strText,strNewText
+
+   fileExt1 = ".pl"
+   fileExt2 = ".cgi"
+   Set fso = CreateObject("Scripting.FileSystemObject")   'Create object
+   Set folder = fso.GetFolder(startDirectory)             'Create reference folder
+
+   For Each file in folder.Files                          'Scan through files
+      If InStr(file.Name,fileExt1) > 0 Or _
+         InStr(file.Name,fileExt2) > 0 Then               'Is it required extension
+
+         Set objFSO = CreateObject("Scripting.FileSystemObject")
+         Set objFile = objFSO.OpenTextFile(file.Path, ForReading) 'Open file for read
+
+         strText = objFile.ReadAll                                'Read file content
+         objFile.Close                                            'End
+         strNewText = Replace(strText, vbCrLf, vbLf)              'Replace CR+LF with LF
+
+         Set objFile = objFSO.OpenTextFile(file.Path, ForWriting) 'Open file for write
+         objFile.WriteLine strNewText                             'Write string to file
+         objFile.Close                                            'Close
+
+         Set objFSO  = Nothing
+         Set objFile = Nothing
+
+       End If 'End is file extension
+   Next
+
+   For Each sub_folder In folder.SubFolders               'Loop through sub-folder
+      us_shebang_update sub_folder.Path                   'Recursive call this function 
+   Next                                                   'Check files in this new folder
+
+   'cleanup
+   Set folder = Nothing
+   Set fso    = Nothing
+End Function
+'==================================================== End Unix end of lines ===
+
+'=== Run Test Script ==========================================================
+Function btf_perl_run_test_script()
+
+  If us_file_exists(US_CGI_BIN  & "\test.pl") Then
+   us_redirect("perl_test")             'Open index.pl Page in browser
+  Else
+   MsgBox lang_perl_popup_str3,,lang_perl_popup_title3 'Unable to find file index.pl
+  End If
+
+  bti_perl_run_test_script.blur        'Remove focus 
+End Function
+'====================================================== End Run Test Script ===
+
+'=== Force Shebang Update Help ================================================
+Function btf_perl_force_update_help()
+
+ MsgBox lang_perl_popup_str4,,lang_perl_popup_title4
+ bti_perl_force_update_help.blur                   'Remove focus 
+
+End Function
+'============================================ End Force Shebang Update Help ===
+
+'=== Convert Win2Nix Help =====================================================
+Function btf_perl_perl_convert_win2nix_help()
+
+ MsgBox lang_perl_popup_str5,,lang_perl_popup_title5
+ bti_perl_convert_win2nix_help.blur                   'Remove focus 
+
+End Function
+'================================================= End Convert Win2Nix Help ===
+
+'=== Run Test Script Help =====================================================
+Function btf_run_test_script_help()
+
+ MsgBox lang_perl_popup_str6,,lang_perl_popup_title6
+ bti_perl_run_test_script_help.blur                   'Remove focus 
+
+End Function
+'================================================= End Run Test Script Help ===
+
+</script>
+
+<style type="text/css">
+/*****************************************/
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+/*****************************************/
+</style>
+</head>
+
+<body>
+
+ <fieldset>
+ <legend id="legi_perl_control" >Perl control panel</legend> 
+
+   <table width="100%" border="0" cellspacing="4">
+    <tr>
+      <td> <button id="bti_perl_force_update" onclick="btf_perl_force_update()" >Force Shebang Update</button> </td>
+      <td width="16"> <button   class="bt_help" id="bti_perl_force_update_help"   onclick="btf_perl_force_update_help()" >?</button></td>
+    </tr>
+
+    <tr>
+      <td> <button id="bti_perl_convert_win2nix" onclick="btf_perl_convert_win2nix()" >Convert Win2Nix</button> </td>
+      <td > <button   class="bt_help" id="bti_perl_convert_win2nix_help"   onclick="btf_perl_perl_convert_win2nix_help()" >?</button></td>
+    </tr>
+
+    <tr>
+      <td> <button id="bti_perl_run_test_script" onclick="btf_perl_run_test_script()" >Run Test Script</button> </td>
+      <td > <button   class="bt_help" id="bti_perl_run_test_script_help"   onclick="btf_run_test_script_help()" >?</button></td>
+    </tr>
+
+  </table>
+ </fieldset>
+
+</body>
+</html>

@@ -1,0 +1,227 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 350;                                // Set Application width
+   var hta_height = 260;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left+10,hta_top+10);                  // it into view.
+   }
+  </script>
+
+  <title>Restore Database From Backup</title>
+ 
+  <hta:application
+   id="coral1_select_dbs_to_backup"
+   applicationname="coral1_select_dbs_to_backup" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 25-4-2011 V1.0
+ Option Explicit
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ document.title = lang_db_restore_title    ' Set new page title 
+ If Not us_mysql_running() Then            'Not running inform user and exit
+    Msgbox lang_create_mysql_popup_str4,,lang_create_mysql_popup_title4
+    window.close()
+ End If
+
+ us_init()                     'Check servers have moved and update accordingly
+ initial_text()                'Set button and side text from lang file
+ populate_mysql_select_box()   'Read databases from backup folder
+
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'Set side text from lang file
+'******************************************************************************
+Function initial_text()
+  Dim track,file_array,strLine
+
+  legi_mysql_databases.InnerHtml        = lang_db_restore_databases_legend   'MySQL Databases
+  itd_name_to_restore.InnerHtml         = lang_db_restore_select_name        'Select database to restore
+
+  bti_restore.value                     = lang_db_restore_bt                 'Restore 
+  bti_help.value                        = lang_db_restore_help_bt            'Help 
+
+End Function
+'------------------------------------------------------------------------------
+
+'=== Populate MySQL Select Box ================================================
+'Read databases from MySQL backup folderr and display
+Function populate_mysql_select_box()
+  Dim objFSO,objFolder,colFiles,objFile
+
+  mysql_databases.options.length=0                          'Clear all items in select box
+
+ '-- Read all files in db backup folder
+ Set objFSO    = CreateObject("Scripting.FileSystemObject") 'Create file obj
+ If objFSO.FolderExists(US_DB_BAK_MAIN) Then
+   Set objFolder = objFSO.GetFolder(US_DB_BAK_MAIN)           'Create object to main backup folder
+   Set colFiles  = objFolder.Files                            'Get list of all files in main backup folder
+
+   For Each objFile in colFiles                               'Scan list of files (main backup folder)
+     call us_select_add_item(mysql_databases,objFile.Name,objFile.Name) 'Add item to select box
+   Next                                                       'Repeat read next file in main db backup folder
+  End If
+
+ Set objFSO    = Nothing 
+ Set objFolder = Nothing 
+ Set colFiles  = Nothing 
+
+End Function
+'============================================ End Populate MySQL Select Box ===
+
+'=== Restore database selected from list ======================================
+Function btf_restore()
+  Dim selected_item,split_array,database_name
+  Dim objFSO
+
+  bti_restore.blur
+
+  selected_item = mysql_databases.value   'Get item selected (backup file name)
+
+  If selected_item = "" Then              'No item selected
+    Msgbox lang_db_restore_popup_str1 ,,lang_db_restore_popup_title1
+    Exit Function                         'Give up
+  End If
+
+ '--Extract database name
+ split_array   = split(selected_item ,"_")   'Split into components
+ database_name = split_array(0)              'Get db name
+
+ '--Check folder exist in the MySQL server data folder
+ set objFSO=CreateObject("Scripting.FileSystemObject")                  'Create file object
+ If  Not objFSO.FolderExists(US_MYSQL_DATA & "\" & database_name) Then  'Does folder exist user may have 
+   Call us_create_mysql_database(database_name,NULL)                    'deleated. Hence create db
+ End If 
+ set objFSO = Nothing 
+
+ '--The folder (database) exists now restore
+ 'database_name - name as used for db
+ 'selected_item - full path including name of backup file
+
+  call us_restore_database(database_name,selected_item)                       'Restore db
+
+  Msgbox lang_db_restore_popup_str2 ,,lang_db_restore_popup_title2
+
+  mysql_databases.selectedIndex = -1      'Select none
+
+End Function
+'================================== End Restore database selected from list ===
+
+'=== Help =====================================================================
+Function btf_help()
+  Msgbox  lang_db_restore_popup_help_str ,,lang_db_restore_popup_help_title
+  bti_help.blur
+End Function
+'================================================================= End Help ===
+
+</script>
+
+<style type="text/css">
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:97%;
+  height:12px;
+ background-color: #D1D1F5;
+}
+
+select{
+ background-color: #D1D1F5;
+  font-size:11px;
+  font-family:Verdana;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+
+
+</style>
+
+</head>
+
+<body>
+<table>
+<tr>
+<td >
+
+<fieldset>
+<legend id="legi_mysql_databases" >Restore MySQL Database</legend> 
+  <table cellspacing="6">
+  <tr><td id="itd_name_to_restore">Select database to restore</td></tr>
+  <tr><td>
+
+    <select size="10" name="mysql_databases" style="width:100%" >
+     <option value="1">Option 1</option>
+     <option value="2">Option 2</option>
+     <option value="3">Option 3</option>
+     <option value="4">Option 4</option>
+     <option value="5">Option 5</option>
+     <option value="6">Option 6</option>
+
+    </select>
+
+   </td></tr>
+  </table>
+
+  <table>
+    <tr>
+     <td width="60%"><button id="bti_restore" onclick="btf_restore()" >Clear</button></td>
+     <td><button id="bti_help"    onclick="btf_help()"   >Help</button></td>
+    </tr>
+  </table>
+
+</fieldset>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+ 

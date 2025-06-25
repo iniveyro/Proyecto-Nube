@@ -1,0 +1,24 @@
+Pear batch files have hardcoded paths. These paths are automatically updated
+when servers are relocated. For each new batch file added to this bin folder
+two files (core_config_inc.vbs and core_functions_inc.vbs) require modification
+as follows:
+
+1) Edit file UniServer\uni_con\includes\core_config_inc.vbs
+   Locate section '-- Pear
+   Create a new unique constant and define full path of file to update e.g.
+
+   USF_PEAR_BAT        = US_HOME & "\us_pear\bin\pear.bat"     '* Pear utility
+
+2) Edit file UniServer\uni_con\includes\core_functions_inc.vbs
+   Locate function us_init() and section === Pear configuration ==
+   Add code to update file e.g.
+
+   If us_file_exists(USF_PEAR_BAT) Then                                  'Only update if exists 
+    Call us_file_search_replace(USF_PEAR_BAT,search_str,replace_str)     'Update pear.bat 
+   End If
+
+Note: The following batch files  pear.bat, peardev.bat and pecl.bat have been
+      added to the above files you can use these as a template.
+
+
+

@@ -1,0 +1,443 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>Untitled Document</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'Globals
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ us_init()             'Check servers have moved and update accordingly
+
+ '--Set legend text
+ legi_accel_eaccelerator.InnerHtml   = lang_accel_eaccelerator_legend  'eAccelerator
+ legi_accel_apc.InnerHtml            = lang_accel_apc_legend           'APC"
+ legi_accel_zop.InnerHtml            = lang_accel_zop_legend           'Zend OpCache"
+
+
+ '--Set button text
+ bi_accel_eaccelerator_ctrl.value      = lang_accel_eaccelerator_bti   'eAccelerator control panel
+ bi_accel_apc_ctrl.value               = lang_accel_apc_bti            'APC control panel"
+ bi_accel_zop_ctrl.value               = lang_accel_zop_bti            'Zend OpCache control panel
+
+ '--Checkbox text
+ iText_eAccelerator.InnerHtml         = lang_accel_eaccelerator_txt1   'Enable eAccelerator
+ iText_APC.InnerHtml                  = lang_accel_apc_txt1            'Enable APC"
+ iText_ZOP.InnerHtml                  = lang_accel_zop_txt1            'Enable Zend OpCache"
+
+
+ set_button_status() 'Set initial button status
+End sub
+'------------------------------------------------------------------------------
+
+'=== Set button status ========================================================
+Function set_button_status()
+
+ '--Check eAccelerator dll exists
+ If us_file_exists(US_PHP_EXTEN & "\eAccelerator.dll") Then
+   chbi_eAccelerator.Disabled          = False  'Enable checkbox
+   bi_accel_eaccelerator_ctrl.Disabled = False  'Enable button
+
+   '-- Is eAccelerator enabled
+   if eaccelerator_enabled() Then      'If enabled
+     chbi_eAccelerator.checked = True  'Set check box
+   Else                                'Not enabled
+     chbi_eAccelerator.checked = False 'Reset check box
+   End if
+
+ Else                                           'Not installed
+   chbi_eAccelerator.Disabled          = True   'Disable checkbox
+   bi_accel_eaccelerator_ctrl.Disabled = True   'Disable button
+ End If
+
+ '--Check APC dll exists
+ If us_file_exists(US_PHP_EXTEN & "\php_apc.dll") Then
+   chbi_APC.Disabled                   = False  'Enable checkbox
+   bi_accel_apc_ctrl.Disabled          = False  'Enable button
+
+   '-- Is APC enabled
+   if apc_enabled() Then               'If enabled
+     chbi_APC.checked = True           'Set check box
+   Else                                'Not enabled
+     chbi_APC.checked = False          'Reset check box
+   End if
+
+ Else                                           'Not installed
+   chbi_APC.Disabled                   = True   'Disable checkbox
+   bi_accel_apc_ctrl.Disabled          = True   'Disable button
+ End If
+
+ '--Check Zend Optimizer Plus (Zend OpCache) dll exists
+ If us_file_exists(US_PHP_EXTEN & "\php_opcache.dll") Then
+   chbi_ZOP.Disabled                   = False  'Enable checkbox
+   bi_accel_zop_ctrl.Disabled          = False  'Enable button
+
+   '-- Is Zend Optimizer Plus (Zend OpCache) enabled
+   if zop_enabled() Then               'If enabled
+     chbi_ZOP.checked = True           'Set check box
+   Else                                'Not enabled
+     chbi_ZOP.checked = False          'Reset check box
+   End if
+
+ Else                                           'Not installed
+   chbi_ZOP.Disabled                   = True   'Disable checkbox
+   bi_accel_zop_ctrl.Disabled          = True   'Disable button
+ End If
+
+End Function
+'==================================================== End set button status ===
+
+'=== Is eAccelerator enabled ==================================================
+'Returns true if eAccelerator enabled
+Function eaccelerator_enabled()
+
+  Dim ini_array,strLine,found
+
+  bi_accel_eaccelerator_ctrl.Disabled = True          'Disable button
+
+  found = False                                       'Assume not enabled
+  ini_array =  us_get_file_as_array(USF_PHP_INI)      'Read file into array
+
+  For Each strLine in ini_array                       'Scan array
+     If Instr(1,strLine,"extension=eaccelerator.dll") = 1 Then  'Look for string
+        found = True                                  'Found set true 
+        bi_accel_eaccelerator_ctrl.Disabled = False   'Enable button
+        Exit For                                      'Nothing else to do
+    End If
+  Next
+  eaccelerator_enabled = found                        'Set return value
+End Function
+'============================================== End Is eAccelerator enabled ===
+
+'=== Is APC enabled ===========================================================
+'Returns true if APC enabled
+Function apc_enabled()
+
+  Dim ini_array,strLine,found
+   bi_accel_apc_ctrl.Disabled          = True         'Disable button
+
+  found = False                                       'Assume not enabled
+  ini_array =  us_get_file_as_array(USF_PHP_INI)      'Read file into array
+
+  For Each strLine in ini_array                       'Scan array
+     If Instr(1,strLine,"extension=php_apc.dll") = 1 Then  'Look for string
+        found = True                                  'Found set true 
+        bi_accel_apc_ctrl.Disabled     = False        'Enable button
+        Exit For                                      'Nothing else to do
+    End If
+  Next
+  apc_enabled = found                                 'Set return value
+End Function
+'======================================================= End Is APC enabled ===
+
+'=== Is ZOP (Zend Optimizer Plus) Zend OpCache enabled =========================
+'Returns true if APC enabled
+Function zop_enabled()
+
+  Dim ini_array,strLine,found,str
+   bi_accel_zop_ctrl.Disabled          = True         'Disable button
+
+  found = False                                       'Assume not enabled
+  ini_array =  us_get_file_as_array(USF_PHP_INI)      'Read file into array
+
+  str = "zend_extension=" & US_PHP_EXTEN & "\php_opcache.dll"
+  str  = Replace(str, "\", "/")                      'Replace \ with /
+
+  For Each strLine in ini_array                       'Scan array
+     If Instr(1,strLine,str)           = 1 Then       'Look for string
+        found = True                                  'Found set true 
+        bi_accel_zop_ctrl.Disabled     = False        'Enable button
+        Exit For                                      'Nothing else to do
+    End If
+  Next
+  zop_enabled = found                                 'Set return value
+End Function
+'======================================================= End Is APC enabled ===
+
+'=== eAccelerator checkbox ====================================================
+Function btf_chb_eacc()
+
+  'Check eAccelerator check box
+  if chbi_eAccelerator.checked Then              'Checked Enable eAccelerator
+    bi_accel_eaccelerator_ctrl.Disabled = False  'Enable button
+    enable_eAccelerator(USF_PHP_INI)
+    enable_eAccelerator(USF_PHP_INI_PROD)
+    enable_eAccelerator(USF_PHP_INI_DEV)
+  Else                                            'Not checked disable eAccelerator
+    bi_accel_eaccelerator_ctrl.Disabled = True    'Disable button
+    disable_eAccelerator(USF_PHP_INI)
+    disable_eAccelerator(USF_PHP_INI_PROD)
+    disable_eAccelerator(USF_PHP_INI_DEV)
+  End If
+
+  Msgbox lang_accel_str,,lang_accel_title
+
+End Function
+'================================================ End eAccelerator checkbox ===
+
+'=== Display eAccelerator control panel =======================================
+Function btf_display_eacc_ctrl_panel()
+  bi_accel_eaccelerator_ctrl.blur               'Remove focus
+  us_redirect("eAccelerator_control_panel")     'Open Page in browser
+End Function
+'=================================== End Display eAccelerator control panel ===
+
+'=== Enable eAccelerator ======================================================
+
+Function enable_eAccelerator(FileName)
+
+  Dim ini_array,i,str,strLine
+
+  ini_array =  us_get_file_as_array(FileName)              'Read file into array
+
+  For i = 0 To UBound(ini_array)                           'Scan all lines in array
+    If Instr(1,ini_array(i),";extension=eaccelerator.dll") = 1 Then  'Look for string
+     ini_array(i) =  "extension=eaccelerator.dll"               'Set new line
+        Exit For                                           'Nothing else to do
+    End If
+  Next 'Read next line
+
+ call us_save_array_to_file(ini_array,FileName) 'Save array 
+
+End Function
+'================================================== End Enable eAccelerator ===
+
+'=== Disable eAccelerator ======================================================
+
+Function disable_eAccelerator(FileName)
+
+  Dim ini_array,i,str,strLine
+
+  ini_array =  us_get_file_as_array(FileName)              'Read file into array
+
+  For i = 0 To UBound(ini_array)                           'Scan all lines in array
+    If Instr(1,ini_array(i),"extension=eaccelerator.dll") = 1 Then  'Look for string
+     ini_array(i) =  ";extension=eaccelerator.dll"         'Set new line
+        Exit For                                           'Nothing else to do
+    End If
+  Next 'Read next line
+
+  call us_save_array_to_file(ini_array,FileName) 'Save array 
+
+End Function
+'================================================= End Disable eAccelerator ===
+
+'=== APC checkbox =============================================================
+Function btf_chb_apc()
+
+  'Check APC check box
+  if chbi_apc.checked Then                  'Checked  Enable APC
+    bi_accel_apc_ctrl.Disabled     = False  'Enable button
+    enable_apc(USF_PHP_INI)
+    enable_apc(USF_PHP_INI_PROD)
+    enable_apc(USF_PHP_INI_DEV)
+  Else                                      'Not checked disable APC
+    bi_accel_apc_ctrl.Disabled     = True   'Disable button
+    disable_apc(USF_PHP_INI)
+    disable_apc(USF_PHP_INI_PROD)
+    disable_apc(USF_PHP_INI_DEV)
+  End If
+
+  Msgbox lang_accel_str,,lang_accel_title
+
+End Function
+'========================================================= End APC checkbox ===
+
+
+'=== Display APC control panel ================================================
+Function btf_display_apc_ctrl_panel()
+  bi_accel_apc_ctrl.blur                  'Remove focus
+  us_redirect("apc_control_panel")        'Open Page in browser
+End Function
+'============================================ End Display APC control panel ===
+
+'=== Enable APC ===============================================================
+
+Function enable_apc(FileName)
+
+  Dim ini_array,i,str,strLine
+
+  ini_array =  us_get_file_as_array(FileName)              'Read file into array
+
+  For i = 0 To UBound(ini_array)                           'Scan all lines in array
+    If Instr(1,ini_array(i),";extension=php_apc.dll") = 1 Then  'Look for string
+     ini_array(i) =  "extension=php_apc.dll"               'Set new line
+        Exit For                                           'Nothing else to do
+    End If
+  Next 'Read next line
+
+ call us_save_array_to_file(ini_array,FileName) 'Save array 
+
+End Function
+'============================================================ End Enable APC ===
+
+'=== Disable APC ===============================================================
+
+Function disable_apc(FileName)
+
+  Dim ini_array,i,str,strLine
+
+  ini_array =  us_get_file_as_array(FileName)              'Read file into array
+
+  For i = 0 To UBound(ini_array)                           'Scan all lines in array
+    If Instr(1,ini_array(i),"extension=php_apc.dll") = 1 Then  'Look for string
+     ini_array(i) =  ";extension=php_apc.dll"              'Set new line
+        Exit For                                           'Nothing else to do
+    End If
+  Next 'Read next line
+
+ call us_save_array_to_file(ini_array,FileName) 'Save array 
+
+End Function
+'=========================================================== End Disable APC ===
+
+'=== ZOP (Zend Optimizer Plus) Zend OpCache checkbox =============================
+Function btf_chb_zop()
+
+  'Check ZOP check box
+  if chbi_zop.checked Then                  'Checked  Enable ZOP
+    bi_accel_zop_ctrl.Disabled     = False  'Enable button
+    enable_zop(USF_PHP_INI)
+    enable_zop(USF_PHP_INI_PROD)
+    enable_zop(USF_PHP_INI_DEV)
+  Else                                      'Not checked disable ZOP
+    bi_accel_zop_ctrl.Disabled     = True   'Disable button
+    disable_zop(USF_PHP_INI)
+    disable_zop(USF_PHP_INI_PROD)
+    disable_zop(USF_PHP_INI_DEV)
+  End If
+
+  Msgbox lang_accel_str,,lang_accel_title
+
+End Function
+'========================================================= End ZOP checkbox ===
+
+
+'=== Display ZOP (Zend Optimizer Plus) Zend OpCache control panel ===============
+Function btf_display_zop_ctrl_panel()
+  bi_accel_zop_ctrl.blur                  'Remove focus
+  us_redirect("zop_control_panel")        'Open Page in browser
+End Function
+'============================================ End Display ZOP control panel ===
+
+'=== Enable ZOP (Zend Optimizer Plus) Zend OpCache =============================
+
+Function enable_zop(FileName)
+
+  Dim ini_array,i,str,strLine,str1,str2
+
+  ini_array =  us_get_file_as_array(FileName)              'Read file into array
+
+  str1 = ";zend_extension=" & US_PHP_EXTEN & "\php_opcache.dll"
+  str1  = Replace(str1, "\", "/")                      'Replace \ with /
+
+  str2 = "zend_extension=" & US_PHP_EXTEN & "\php_opcache.dll"
+  str2  = Replace(str2, "\", "/")                      'Replace \ with /
+
+
+  For i = 0 To UBound(ini_array)                           'Scan all lines in array
+    If Instr(1,ini_array(i),str1) = 1 Then                 'Look for string
+     ini_array(i) =  str2                                  'Set new line
+        Exit For                                           'Nothing else to do
+    End If
+  Next 'Read next line
+
+ call us_save_array_to_file(ini_array,FileName) 'Save array 
+
+End Function
+'============================================================ End Enable ZOP ===
+
+
+'=== Disable ZOP (Zend Optimizer Plus) Zend OpCache =============================
+
+Function disable_zop(FileName)
+
+  Dim ini_array,i,str,strLine,str1,str2
+
+  ini_array =  us_get_file_as_array(FileName)              'Read file into array
+
+  str1 = ";zend_extension=" & US_PHP_EXTEN & "\php_opcache.dll"
+  str1  = Replace(str1, "\", "/")                      'Replace \ with /
+
+  str2 = "zend_extension=" & US_PHP_EXTEN & "\php_opcache.dll"
+  str2  = Replace(str2, "\", "/")                      'Replace \ with /
+
+  For i = 0 To UBound(ini_array)                       'Scan all lines in array
+    If Instr(1,ini_array(i),str2) = 1 Then             'Look for string
+     ini_array(i) =  str1                              'Set new line
+        Exit For                                       'Nothing else to do
+    End If
+  Next 'Read next line
+
+ call us_save_array_to_file(ini_array,FileName) 'Save array 
+
+End Function
+'=========================================================== End Disable ZOP ===
+
+
+</script>
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<style type="text/css">
+
+td{
+  padding:1px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+.check_box{
+ width:auto;
+ background-color: #D1D1F5;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<fieldset>
+<legend id="legi_accel_eaccelerator" >eAccelerator</legend> 
+
+<table cellspacing="0" border="0" >
+<td><input  type="checkbox"  id="chbi_eAccelerator" onclick="btf_chb_eacc()" /><span id="iText_eAccelerator">Enable eAccelerator</span></td>
+
+<tr><td><button  id="bi_accel_eaccelerator_ctrl" onclick="btf_display_eacc_ctrl_panel()" >eAccelerator control panel</button></td></tr>
+</table>
+
+</fieldset>
+
+<fieldset>
+<legend id="legi_accel_apc" >APC</legend> 
+
+<table cellspacing="0" border="0" >
+<td><input  type="checkbox" id="chbi_APC" onclick="btf_chb_apc()"  /><span id="iText_APC">Enable APC</span></td>
+
+<tr><td><button  id="bi_accel_apc_ctrl" onclick="btf_display_apc_ctrl_panel()" >APC control panel</button></td></tr>
+</table>
+
+</fieldset>
+
+<fieldset>
+<legend id="legi_accel_zop" >ZOP</legend> 
+
+<table cellspacing="0" border="0" >
+<td><input  type="checkbox" id="chbi_ZOP" onclick="btf_chb_zop()"  /><span id="iText_ZOP">Enable Zend OpCache</span></td>
+
+<tr><td><button  id="bi_accel_zop_ctrl" onclick="btf_display_zop_ctrl_panel()" >Zend OpCache control panel</button></td></tr>
+</table>
+
+</fieldset>
+
+</body>
+</html>

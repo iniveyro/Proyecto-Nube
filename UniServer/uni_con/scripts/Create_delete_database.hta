@@ -1,0 +1,262 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 500;                                // Set Application width
+   var hta_height = 260;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left+10,hta_top+10);                  // it into view.
+   }
+  </script>
+
+  <title>Create Delete MySQL Database</title>
+ 
+  <hta:application
+   id="coral1_create_delete_mysql_database"
+   applicationname="coral1_create_delete_mysql_database" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="yes"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 22-4-2011 V1.0
+ Option Explicit
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ document.title = lang_create_delete_mysql_db_title      ' Set new page title 
+ If Not us_mysql_running() Then            'Not running inform user and exit
+    Msgbox lang_create_mysql_popup_str4,,lang_create_mysql_popup_title4
+    window.close()
+ End If
+
+ us_init()                     'Check servers have moved and update accordingly
+ initial_text()                'Set button and side text from lang file
+ populate_select_box()         'Read databases from MySQL server and display
+
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'Set side text from lang file
+'******************************************************************************
+Function initial_text()
+  Dim track,file_array,strLine
+
+  legi_create_database.InnerHtml   = lang_create_database_mysql_legend  'Create a Database
+  legi_clear_both.InnerHtml        = lang_clear_both_mysql_legend       'Clear Both
+  legi_delete_database.InnerHtml   = lang_delete_database_mysql_legend  'Delete a Database 
+
+  itd_name_to_create.InnerHtml     = lang_enter_name_to_create_mysql    'Enter database name to create
+  itd_name_to_delete.InnerHtml     = lang_select_name_to_delete_mysql   'Select database to delete 
+
+  bti_create_database.value        = lang_create_database_mysql_bt      'Create_database 
+  bti_clear_both.value             = lang_clear_both_mysql_bt           'Clear Both
+  bti_delete_database.value        = lang_delete_database_mysql_bt      'Delete Database 
+
+End Function
+'------------------------------------------------------------------------------
+
+'=== Populate Select Box ======================================================
+'Read databases from MySQL server and display
+Function populate_select_box()
+  Dim database_array(),mysql_str,line,str
+  Redim database_array(0)
+
+ mysql_databases.options.length=0  'Clear all items in select box
+
+ mysql_str = "show databases;"                'Sql to list all databases
+
+ If us_mysql_batch(mysql_str,database_array) Then 'Database array returned
+
+   For each line in database_array             'Scan array
+     'Excluded the databases listed. We dont want a user to delete these
+     If not (line="Database" or line="information_schema" or line="mysql" or line="performance_schema" or line="phpmyadmin")  Then
+       call us_select_add_item(mysql_databases,line,line) 'Add item to select box
+     End If
+   Next
+ End If
+
+
+End Function
+'=== End Populate Select Box ===
+
+'=== Clear both ===============================================================
+Function btf_bti_clear_both()
+  mysql_databases.selectedIndex = -1 'Select none
+  ip_name_to_create.value=""
+  bti_clear_both.blur
+End Function
+'=========================================================== End Clear both ===
+
+'=== Create Database ==========================================================
+Function btf_create_database()
+  Dim database_array(),mysql_str,line,new_db_name
+  Redim database_array(0)
+
+  bti_create_database.blur
+
+  new_db_name = ip_name_to_create.value
+
+  If new_db_name ="" Then                 'Is name blank
+   MsgBox lang_create_mysql_popup_str1,,lang_create_mysql_popup_title1
+   Exit Function
+  End If
+
+  'Read databases into array
+   mysql_str = "show databases;"                   'Sql to list all databases
+
+  If us_mysql_batch(mysql_str,database_array) Then 'Database array returned
+    For each line in database_array                'Scan array
+      If line=new_db_name  Then                    'Already created
+        Msgbox lang_create_mysql_popup_str2,,lang_create_mysql_popup_title2
+        Exit Function
+      End If
+    Next
+  End If
+
+  Call us_create_mysql_database(new_db_name,NULL) 'Create new database
+  populate_select_box()                           'Re-populate db list  
+
+End Function
+'====================================================== End Create Database ===
+
+
+'=== Delete Database ==========================================================
+Function btf_delete_database()
+
+  bti_delete_database.blur
+
+  If mysql_databases.value ="" Then    'Was a selection made
+    Msgbox lang_create_mysql_popup_str3,,lang_create_mysql_popup_title3
+    Exit Function
+  End If
+
+  us_drop_mysql_database(mysql_databases.value) 'Delete selected database
+  populate_select_box()                         'Re-populate db list 
+
+End Function
+'====================================================== End Delete Database ===
+
+'=== Help =====================================================================
+Function btf_ba_help()
+  MsgBox lang_ab_help_str,,lang_ab_help_title
+  bti_ba_help.blur
+End Function
+'================================================================= End Help ===
+</script>
+
+<style type="text/css">
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:97%;
+  height:12px;
+ background-color: #D1D1F5;
+}
+
+select{
+ background-color: #D1D1F5;
+  font-size:11px;
+  font-family:Verdana;
+}
+
+button{
+ font-size:11px;
+ font-family:Verdana;
+}
+
+
+</style>
+
+</head>
+
+<body>
+<table>
+<tr>
+<td width="50%">
+<fieldset>
+<legend id="legi_create_database" >Create a Database</legend> 
+  <table cellspacing="6">
+  <tr><td id="itd_name_to_create">Enter database name to create</td></tr>
+  <tr><td><input   id="ip_name_to_create" type="text"></td></tr>
+  <tr><td><button  id="bti_create_database" onclick="btf_create_database()" >Create_database</button></td></tr>
+  </table>
+</fieldset>
+
+<fieldset style="margin-top:64px">
+<legend id="legi_clear_both" >Clear Both</legend> 
+  <table  cellspacing="6">
+  <tr><td><button   id="bti_clear_both" onclick="btf_bti_clear_both()" >Clear Both</button></td></tr>
+  </table>
+</fieldset>
+
+</td>
+
+
+
+<td>
+<fieldset>
+<legend id="legi_delete_database" >Delete a Database</legend> 
+  <table cellspacing="6">
+  <tr><td id="itd_name_to_delete">Select database to delete</td></tr>
+  <tr><td>
+
+    <select size="10" name="mysql_databases" style="width:100%" >
+     <option value="1">Option 1</option>
+     <option value="2">Option 2</option>
+     <option value="3">Option 3</option>
+     <option value="4">Option 4</option>
+     <option value="5">Option 5</option>
+     <option value="6">Option 6</option>
+
+    </select>
+
+</td></tr>
+  <tr><td><button id="bti_delete_database" onclick="btf_delete_database()" >Delete Database</button></td></tr>
+  </table>
+</fieldset>
+</td>
+
+</tr>
+</table>
+
+</body>
+</html>
+ 

@@ -1,0 +1,26 @@
+220114 21:27:35 [Note] Plugin 'FEDERATED' is disabled.
+220114 21:27:35 InnoDB: The InnoDB memory heap is disabled
+220114 21:27:35 InnoDB: Mutexes and rw_locks use Windows interlocked functions
+220114 21:27:35 InnoDB: Compressed tables use zlib 1.2.3
+220114 21:27:36 InnoDB: Initializing buffer pool, size = 16.0M
+220114 21:27:36 InnoDB: Completed initialization of buffer pool
+InnoDB: The first specified data file D:\Ivan\DolorDeHuebo\SV\UniServer\usr\local\mysql\data\ibdata1 did not exist:
+InnoDB: a new database to be created!
+220114 21:27:36  InnoDB: Setting file D:\Ivan\DolorDeHuebo\SV\UniServer\usr\local\mysql\data\ibdata1 size to 10 MB
+InnoDB: Database physically writes the file full: wait...
+220114 21:27:36  InnoDB: Log file D:\Ivan\DolorDeHuebo\SV\UniServer\usr\local\mysql\data\ib_logfile0 did not exist: new to be created
+InnoDB: Setting log file D:\Ivan\DolorDeHuebo\SV\UniServer\usr\local\mysql\data\ib_logfile0 size to 5 MB
+InnoDB: Database physically writes the file full: wait...
+220114 21:27:36  InnoDB: Log file D:\Ivan\DolorDeHuebo\SV\UniServer\usr\local\mysql\data\ib_logfile1 did not exist: new to be created
+InnoDB: Setting log file D:\Ivan\DolorDeHuebo\SV\UniServer\usr\local\mysql\data\ib_logfile1 size to 5 MB
+InnoDB: Database physically writes the file full: wait...
+InnoDB: Doublewrite buffer not found: creating new
+InnoDB: Doublewrite buffer created
+InnoDB: 127 rollback segment(s) active.
+InnoDB: Creating foreign key constraint system tables
+InnoDB: Foreign key constraint system tables created
+220114 21:27:37  InnoDB: Waiting for the background threads to start
+220114 21:27:38 InnoDB: 5.5.33 started; log sequence number 0
+220114 21:27:38 [Note] Server hostname (bind-address): '127.0.0.1'; port: 3306
+220114 21:27:38 [Note]   - '127.0.0.1' resolves to '127.0.0.1';
+220114 21:27:38 [Note] Server socket created on IP: '127.0.0.1'.

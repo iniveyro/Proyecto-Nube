@@ -1,0 +1,712 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 466;                                // Set Application width
+   var hta_height = 298;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left,hta_top)',100);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left,hta_top);                  // it into view.
+   }
+  </script>
+
+  <title>Move Servers</title>
+ 
+  <hta:application
+   id="coral1_multi_servers"
+   applicationname="coral1_multi_servers" 
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   minimizeButton="no"
+   navigable="yes"
+   scroll="no"
+   showintaskbar="yes"
+   singleinstance="yes"
+   SysMenu="no"
+  />
+ 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'MPG 27-4-2011 V1.0
+ Option Explicit
+ Dim image_number,menu_restart  'Global
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ Dim arrCommands,i
+ document.title = lang_multi_server_page_title ' Set new page title
+
+ '-- Get parameter passed
+ 'coral_multi_servers.commandLine gives "path to this hta" "parmeter1"
+ 'No parameter. Script was started directely. Hence do not run program/server menu.
+ 'Parameter. Script was started either by our program or server menu. 
+ '           Paramter is name of calling script we use this after updaing server
+ '           to restart appropriate menu.
+
+ arrCommands = Split(coral1_multi_servers.commandLine, chr(34)) 'Split at "
+    If Ubound(arrCommands) = 4 Then 'Command line parameter was passed
+     menu_restart = arrCommands(3)  'Command is uni_con_program.hta or uni_con_service.hta
+    Else                            'No parameter
+     menu_restart = ""              'Set menu restart blank
+    End If
+
+
+ us_init()             'Check servers have moved and update accordingly
+ initial_text()        'Set button and side text from lang file
+ update_input_status() 'Display old and new input status 
+End sub
+
+'******************************************************************************
+'Set initial button text. Text from language configuration file
+'Set side text from lang file
+'******************************************************************************
+Function initial_text()
+
+  iOld_heading.InnerHtml           = lang_multi_old_heading '-- Old --
+  iNew_heading.InnerHtml           = lang_multi_new_heading '-- New --
+
+  iText_apache_port.InnerHtml      = lang_apache_1a         'Apache port
+  iText_apache_ssl_port.InnerHtml  = lang_apache_2a         'Apache SSL port
+  iText_mysql_port.InnerHtml       = lang_mysql_1a          'MySQL port
+  iText_apache_exe_name.InnerHtml  = lang_apache_3a         'Apache executable name
+  iText_mysql_exe_name.InnerHtml   = lang_mysql_2a          'MySQL executable name 
+
+  iText_apache_service_name.InnerHtml  = lang_apache_4a     'Apache service name
+  iText_mysql_service_name.InnerHtml   = lang_mysql_3a      'MySQL service name 
+  iText_cron_service_name.InnerHtml    = lang_general_5a    'Cron service name 
+
+  bti_reload.value              = lang_multi_reload               'Reload
+  bti_increment.value           = lang_multi_increment            'Increment
+  bti_run.value                 = lang_multi_run                  'Run
+
+End Function
+'------------------------------------------------------------------------------
+
+'******************************************************************************
+'Update status of each input. Uses configuration information from config files
+'******************************************************************************
+Function update_input_status()
+
+  image_number    =  us_get_server_number()         'Get initial server number
+  iOld_logo.src   = "..\images\coral_server_" & image_number & ".ico"
+
+  iOld_apache_port.value          = us_get_apache_port()
+  iOld_apache_ssl_port.value      = us_get_apache_ssl_port()
+  iOld_mysql_port.value           = us_get_mysql_port()
+  iOld_apache_exe_name.value      = us_get_apache_exe()
+  iOld_mysql_exe_name.value       = us_get_mysql_exe()
+  iOld_apache_service_name.value  = us_get_apache_service_name()
+  iOld_mysql_service_name.value   = us_get_mysql_service_name()
+  iOld_cron_service_name.value    = us_get_cron_service_name()
+
+  'Original before increment - doubles up as temp storage
+  iNew_logo.src   = "..\images\coral_server_" & image_number & ".ico"
+
+  iNew_apache_port.value          = us_get_apache_port()
+  iNew_apache_ssl_port.value      = us_get_apache_ssl_port()
+  iNew_mysql_port.value           = us_get_mysql_port()
+  iNew_apache_exe_name.value      = us_get_apache_exe()
+  iNew_mysql_exe_name.value       = us_get_mysql_exe()
+  iNew_apache_service_name.value  = us_get_apache_service_name()
+  iNew_mysql_service_name.value   = us_get_mysql_service_name()
+  iNew_cron_service_name.value    = us_get_cron_service_name()
+
+  increment_values()  'Create new server parameters
+End Function
+
+'******************************************************************************
+'Increment proposed values displayed to user.
+'******************************************************************************
+'First run is initial proposed values
+'Further runs are user initiated. Either by increment button or manually changed
+
+Function increment_values()
+
+ image_number = image_number + 1 'Increment images
+ 
+ If image_number >9 Then                      'Pre-defined images are 1-9 above this 
+   iNew_logo.src   = "..\images\generic.ico"  'use a generic image . 
+ Else                                         'otherwise use a pre-defined image
+   iNew_logo.src   = "..\images\coral_server_" & image_number & ".ico"
+ End if
+
+ iNew_apache_port.value     = iNew_apache_port.value + 1
+ iNew_apache_ssl_port.value = iNew_apache_ssl_port.value + 1
+ iNew_mysql_port.value      = iNew_mysql_port.value + 1
+
+Dim objRegEx,patern,colMatches,strMatch
+
+ '--Apache exe name
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^httpd(\d+).exe"              'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_apache_exe_name.value) '* Return collection of Match objects 
+ If colMatches.Count > 0 Then                                  '* Match found
+     iNew_apache_exe_name.value = "httpd" & colMatches(0).SubMatches(0) +1 & ".exe"
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+ '--MySQL exe name
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^mysqld(\d+).exe"             'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_mysql_exe_name.value) '* Return collection of Match objects 
+ If colMatches.Count > 0 Then                                  '* Match found
+     iNew_mysql_exe_name.value = "mysqld" & colMatches(0).SubMatches(0) +1 & ".exe"
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+ '--Apache service name
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^US_ApacheS(\d+)"             'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_apache_service_name.value) '* Return collection of Match objects 
+ If colMatches.Count > 0 Then                                      '* Match found
+     iNew_apache_service_name.value = "US_ApacheS" & colMatches(0).SubMatches(0) +1
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+ '--MySQL service name
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^US_MySQLS(\d+)"              'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_mysql_service_name.value) '* Return collection of Match objects 
+ If colMatches.Count > 0 Then                                     '* Match found
+     iNew_mysql_service_name.value = "US_MySQLS" & colMatches(0).SubMatches(0) +1
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+ '--Cron service name
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^US_CronS(\d+)"               'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_cron_service_name.value) '* Return collection of Match objects 
+ If colMatches.Count > 0 Then                                     '* Match found
+   iNew_cron_service_name.value = "US_CronS" & colMatches(0).SubMatches(0) +1
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+End Function
+'-------------------------------------------------------------------------------
+
+'******************************************************************************
+'Validation Ensure all values are valid
+'******************************************************************************
+Function valid()
+ Dim objRegEx,patern,colMatches
+ 
+ '--Apache port range check
+ If Not (iNew_apache_port.value >= 0 And iNew_apache_port.value <= 65535) Then
+  MsgBox lang_apache_1a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If 
+
+ '--Apache port equal check
+ If iOld_apache_port.value = iNew_apache_port.value Then
+  MsgBox lang_apache_1a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If 
+
+ '--Apache ssl port range check
+ If Not (iNew_apache_ssl_port.value >= 0 And iNew_apache_ssl_port.value <= 65535) Then
+  MsgBox lang_apache_2a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If 
+
+ '--Apache ssl port equal check
+ If iOld_apache_ssl_port.value = iNew_apache_ssl_port.value Then
+  MsgBox lang_apache_2a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If 
+
+ '--MySQL port range check
+ If Not (iNew_mysql_port.value >= 0 And iNew_mysql_port.value <= 65535) Then
+  MsgBox lang_mysql_1a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If 
+
+ '--MySQL port equal check
+ If iOld_mysql_port.value = iNew_mysql_port.value Then
+  MsgBox lang_mysql_1a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If 
+
+ '--Apache exe name check
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^(httpd\d+.exe)"              'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_apache_exe_name.value) '* Return collection of Match objects 
+ If Not colMatches.Count > 0 Then                              '* Match not found
+  MsgBox lang_apache_3a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+ '--Apache exe name equal check
+ If iOld_apache_exe_name.value = iNew_apache_exe_name.value Then    
+  MsgBox lang_apache_3a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+
+ '--MySQL exe name check
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^(mysqld\d+.exe)"             'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_mysql_exe_name.value)  '* Return collection of Match objects 
+ If Not colMatches.Count > 0 Then                              '* Match not found
+  MsgBox lang_mysql_2a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+ '--MySQL exe name equal check
+ If iOld_mysql_exe_name.value = iNew_mysql_exe_name.value Then                            
+  MsgBox lang_mysql_2a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+
+ '--Apache service name check
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^(US_ApacheS\d+)"             'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_apache_service_name.value) '* Return collection of Match objects 
+ If Not colMatches.Count > 0 Then                              '* Match not found
+  MsgBox lang_apache_4a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+ '--Apache service name equal check
+ If iOld_apache_service_name.value = iNew_apache_service_name.value Then                          
+  MsgBox lang_apache_4a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+
+ '--MySQL service name check
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^(US_MySQLS\d+)"             'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_mysql_service_name.value)  '* Return collection of Match objects 
+ If Not colMatches.Count > 0 Then                              '* Match not found
+  MsgBox lang_mysql_3a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+ '--MySQL service name equal check
+ If iOld_mysql_service_name.value = iNew_mysql_service_name.value Then
+  MsgBox lang_mysql_3a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+
+ '--Cron service name check
+ Set objRegEx = New RegExp               'Create new reg obj
+ patern = "^(US_CronS\d+)"             'Create search pattern Listen
+ objRegEx.Pattern = patern               'Assign search pattern
+
+ Set colMatches = objRegEx.Execute(iNew_cron_service_name.value)  '* Return collection of Match objects 
+ If Not colMatches.Count > 0 Then                              '* Match not found
+  MsgBox lang_general_5a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+ Set objRegEx   = Nothing 
+ Set colMatches = Nothing 
+
+ '--Cron service name equal check
+ If iOld_cron_service_name.value = iNew_cron_service_name.value Then
+  MsgBox lang_general_5a & vbCRLF & vbCRLF & lang_multi_please_correct,,lang_multi_invalid
+  valid = false
+  exit function
+ End If
+
+ valid = true 'All values are valid
+End Function
+'-------------------------------------------------------------------------------
+
+'=== Move menus ===============================================================
+'Each menu (service/program) must be unique to a particular server. Defining
+'a application name and single instance only one menu can open for that server.
+'Application and a corresponding icon name must be different for additional servers.
+'Naming convention used has the following format coral_server_xx where xx is a 
+'unique number. This function sets the following in both service-program menus:
+' id="coral_server_1"             
+' applicationname="coral_server_1" 
+' icon="./images/coral_server_1.ico" 
+
+Function us_move_menus(server_number)
+ Const ForReading = 1
+ Dim FileName,arrFileLines,i,str,strLine
+
+ '=== Update menu uni_con_program.hta ===
+
+ FileName = US_UNI_CON & "\uni_con_program.hta"
+ arrFileLines = us_get_file_as_array(FileName) 'Save file to array
+
+ '--Change id
+ For i = 0 To UBound(arrFileLines)                                 'Scan all lines in array
+  If InStr(arrFileLines(i),"id='coral_server") Then                'String found build new entry
+    arrFileLines(i) = "   id='coral_server_" & server_number & "'"
+  End If
+ Next                                                              'Get next line
+    
+ '--Change Application name
+ For i = 0 To UBound(arrFileLines)                                 'Scan all lines in array
+  If InStr(arrFileLines(i),"applicationname=") Then  'String found build new entry
+    arrFileLines(i) = "   applicationname='coral_server_" & server_number & "'"
+  End If
+ Next                                                              'Get next line
+    
+ '--Change Icon name
+ For i = 0 To UBound(arrFileLines)                                 'Scan all lines in array
+  If InStr(arrFileLines(i),"icon=") Then                           'String found build new entry
+   If server_number >9 Then                                        'User defined image
+     arrFileLines(i) = "icon='./images/generic.ico'"
+   Else                                                            'Image in range 1-9
+    arrFileLines(i) = "   icon='./images/coral_server_" & server_number & ".ico'"
+   End If
+  End If
+ Next                                                              'Get next line
+
+   call us_save_array_to_file(arrFileLines,FileName) 'Save array 
+
+ '---- End Update menu uni_con_program.hta -------
+
+ Erase arrFileLines 'Clear array
+
+ '=== Update menu uni_con_service.hta ===
+
+ FileName = US_UNI_CON & "\uni_con_service.hta"
+ arrFileLines = us_get_file_as_array(FileName) 'Save file to array
+
+ '--Change id
+ For i = 0 To UBound(arrFileLines)                                 'Scan all lines in array
+  If InStr(arrFileLines(i),"id='coral_server") Then                'String found build new entry
+    arrFileLines(i) = "   id='coral_server_" & server_number & "'"
+  End If
+ Next                                                              'Get next line
+    
+ '--Change Application name
+ For i = 0 To UBound(arrFileLines)                                 'Scan all lines in array
+  If InStr(arrFileLines(i),"applicationname=") Then  'String found build new entry
+    arrFileLines(i) = "   applicationname='coral_server_" & server_number & "'"
+  End If
+ Next                                                              'Get next line
+    
+ '--Change Icon name
+ For i = 0 To UBound(arrFileLines)                                 'Scan all lines in array
+  If InStr(arrFileLines(i),"icon=") Then                           'String found build new entry
+   If server_number >9 Then                                        'User defined image
+     arrFileLines(i) = "icon='./images/generic.ico'"
+   Else                                                            'Image in range 1-9
+    arrFileLines(i) = "   icon='./images/coral_server_" & server_number & ".ico'"
+   End If
+  End If
+ Next                                                              'Get next line
+
+   call us_save_array_to_file(arrFileLines,FileName) 'Save array 
+
+ '---- End Update menu uni_con_service.hta -------
+
+
+End Function
+'========================================================== End Move menus ====
+
+'******************************************************************************
+'Close Application
+'******************************************************************************
+Function btf_close()
+ Dim objShell
+    If menu_restart = "" Then                      'Nothing else to do 
+      window.close()                               'close this application 
+    Else                                           'It was started from a menu 
+
+     Set objShell = CreateObject("WScript.Shell")  'Crete shell object
+     objShell.Run (US_UNI_CON & "\" & menu_restart)'Re-start the calling aplication
+     Set objShell = Nothing 
+     window.close()                                'close this application 
+    End If
+
+End Function
+'-------------------------------------------------------------------------------
+
+
+'******************************************************************************
+'Display user help information
+'******************************************************************************
+Function btf_help()
+ display_html_doc_page("start_multi_servers.html")
+
+  bti_help.blur        'Remove focus and double line 
+End Function
+'-------------------------------------------------------------------------------
+
+'******************************************************************************
+'Reload original data
+'******************************************************************************
+Function btf_reload()
+  update_input_status()   'Display old and new input status 
+  bti_reload.blur        'Remove focus and double line 
+End Function
+'-------------------------------------------------------------------------------
+
+'******************************************************************************
+'Increment new values displayed
+'******************************************************************************
+Function btf_increment() 
+  increment_values()    'Increment new values
+  bti_increment.blur    'Remove focus and double line 
+End Function
+'-------------------------------------------------------------------------------
+
+'******************************************************************************
+'Run move servers
+'******************************************************************************
+Function btf_run() 
+ Dim objShell,objFSO
+ If valid() Then         'Ensure all values are valid
+
+   use_set_server_number(image_number)                'Update server number in tracker
+   us_move_menus(image_number)                        'Update server menus to new number
+
+   'Change ports in configuration files
+   call us_change_apache_port(iOld_apache_port.value,iNew_apache_port.value)            
+   call us_change_apache_ssl_port(iOld_apache_ssl_port.value,iNew_apache_ssl_port.value)
+   call us_change_mysql_port(iOld_mysql_port.value,iNew_mysql_port.value )              
+
+   'Rename Apache and MySQL exe
+   Set objFSO = CreateObject("Scripting.FileSystemObject")
+   objFSO.MoveFile US_APACHE_BIN & "\" & iOld_apache_exe_name.value , US_APACHE_BIN & "\" & iNew_apache_exe_name.value 
+
+   Set objFSO = CreateObject("Scripting.FileSystemObject")
+   objFSO.MoveFile US_MYSQL_BIN & "\" & iOld_mysql_exe_name.value , US_MYSQL_BIN & "\" & iNew_mysql_exe_name.value 
+   Set objFSO = Nothing 
+
+   'SetService names in tracker .ini
+   call us_my_ini_set(USF_TRACKER, "SERVICE", "apache_service_name", iNew_apache_service_name.value)
+   call us_my_ini_set(USF_TRACKER, "SERVICE", "mysql_service_name", iNew_mysql_service_name.value)
+   call us_my_ini_set(USF_TRACKER, "SERVICE", "cron_service_name", iNew_cron_service_name.value)
+
+   'Update all Cron files with new service name
+   update_cron_files()
+
+   us_unitray_update("Change")                     'Check for UniTray and update to match server number
+
+   'Check for menu re-start
+    If menu_restart = "" Then                      'Nothing else to do 
+      window.close()                               'close this application 
+    Else                                           'This script was started from a menu 
+     Set objShell = CreateObject("WScript.Shell")  'Crete shell object
+     objShell.Run (US_UNI_CON & "\" & menu_restart)  'Re-start the calling aplication
+     Set objShell = Nothing 
+     window.close()                                'close this application 
+    End If
+ End If
+
+  bti_run.blur    'Remove focus and double line 
+End Function
+'-------------------------------------------------------------------------------
+'=== Update Cron files =========================================================
+Function update_cron_files()
+ Dim old_name,new_name
+  old_name = iOld_cron_service_name.value
+  new_name = iNew_cron_service_name.value
+
+  call us_file_search_replace(USF_CRON_SERVICE_INI,old_name,new_name)             'Update srvstart.ini 
+  call us_file_search_replace(USF_CRON_SERVICE_Z_INSTALL,old_name,new_name)       'Update z_install.bat
+  call us_file_search_replace(USF_CRON_SERVICE_START_AUTOMATIC,old_name,new_name) 'Update start_automatic.vbs
+  call us_file_search_replace(USF_CRON_SERVICE_Z_START,old_name,new_name)         'Update z_service_start.bat
+  call us_file_search_replace(USF_CRON_SERVICE_Z_STOP,old_name,new_name)          'Update z_service_stop.bat
+  call us_file_search_replace(USF_CRON_SERVICE_Z_UNINSTALL ,old_name,new_name)    'Update z_uninstall_service.bat
+
+End Function
+'==================================================== End Update Cron files ====
+
+</script>
+
+<script language="JavaScript">
+//******************************************************************************
+//Allow only numeric input and backspace key
+//******************************************************************************
+function onlyNumbers(evt){
+ var e = event || evt; // for trans-browser compatibility
+ var charCode = e.which || e.keyCode;
+
+ if (charCode > 31 && (charCode < 48 || charCode > 57))
+  return false;
+  return true;
+}
+//-------------------------------------------------------------------------------
+</script>
+
+
+<style type="text/css">
+
+/* Top legend */
+
+table{
+ width:100%;
+}
+td{
+  padding:0px; 
+  font-size:11px;
+  font-family:Verdana;
+}
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:100px;
+ background-color: #D1D1F5;
+}
+
+.old_input{
+ text-align:center;
+ color:#555555;
+}
+
+.check_box{
+ width:auto;
+ background-color: #D1D1F5;
+}
+
+.heading{
+  padding-left:10px;
+  color:#555555;
+  font-size:12px;
+  font-family:Verdana;
+  font-style: italic;
+  font-weight: bold;
+}
+
+</style>
+
+</head>
+<body>
+
+<table cellspacing="3" border="0" >
+
+<tr>
+<td ><img align="absmiddle" id="iOld_logo" src="../images/logo.gif" width="16" height="16" ><span class="heading"  id="iOld_heading">OLD</span></td>
+<td ><img align="absmiddle" id="iNew_logo" src="../images/logo.gif" width="16" height="16" ><span class="heading"  id="iNew_heading">New</span></td>
+<td style="width:100%" align="right">
+<button   class="bt_help" id="bti_help"   onclick="btf_help()" >!</button>&nbsp;
+<button   class="bt_help" id="bti_close"   onclick="btf_close()" >X</button>
+</td>
+</tr>
+
+<tr>
+<td ><input class="old_input"  id="iOld_apache_port" type="text" readonly="readonly"></td>
+<td ><input  id="iNew_apache_port" type="text"  onkeypress="javascript: return onlyNumbers();" ></td>
+<td          id="iText_apache_port"></td>
+</tr>
+
+<tr>
+<td><input class="old_input"   id="iOld_apache_ssl_port" type="text" readonly="readonly"></td>
+<td><input  id="iNew_apache_ssl_port" type="text" onkeypress="javascript: return onlyNumbers();"></td>
+<td         id="iText_apache_ssl_port"></td>
+</tr>
+
+<tr>
+<td><input class="old_input"   id="iOld_mysql_port" type="text" readonly="readonly"></td>
+<td><input  id="iNew_mysql_port" type="text" onkeypress="javascript: return onlyNumbers();"></td>
+<td         id="iText_mysql_port"></td>
+</tr>
+
+<tr>
+<td><input class="old_input"   id="iOld_apache_exe_name" type="text" readonly="readonly"></td>
+<td><input  id="iNew_apache_exe_name" type="text"></td>
+<td         id="iText_apache_exe_name"></td>
+</tr>
+
+<tr>
+<td><input class="old_input"   id="iOld_mysql_exe_name" type="text" readonly="readonly"></td>
+<td><input  id="iNew_mysql_exe_name" type="text"></td>
+<td         id="iText_mysql_exe_name"></td>
+</tr>
+
+<tr>
+<td><input class="old_input"   id="iOld_apache_service_name" type="text" readonly="readonly"></td>
+<td><input  id="iNew_apache_service_name" type="text"></td>
+<td         id="iText_apache_service_name"></td>
+</tr>
+
+<tr>
+<td><input class="old_input"   id="iOld_mysql_service_name" type="text" readonly="readonly"></td>
+<td><input  id="iNew_mysql_service_name" type="text"></td>
+<td         id="iText_mysql_service_name"></td>
+</tr>
+
+<tr>
+<td><input class="old_input"   id="iOld_cron_service_name" type="text" readonly="readonly"></td>
+<td><input  id="iNew_cron_service_name" type="text"></td>
+<td         id="iText_cron_service_name"></td>
+</tr>
+
+<tr>
+<td colspan="2"><button   id="bti_reload"    onclick="btf_reload()" >Reload</button></td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td colspan="2"><button   id="bti_increment" onclick="btf_increment()" >Increment</button></td>
+<td><button   id="bti_run"       onclick="btf_run()" >Run</button></td>
+</tr>
+
+
+</table>
+
+ </body>
+</html>
+ 

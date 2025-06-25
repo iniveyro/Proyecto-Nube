@@ -1,0 +1,888 @@
+﻿<html>
+<head>
+<title>Untitled Document</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+ '--Globals
+ Dim id_general,id_apache,id_mysql,id_php,id_msmpt,id_cron,id_dtdns
+ Dim id_db_backup,id_perl,tim1,objShell
+
+ Set objShell = CreateObject("WScript.Shell")
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ us_init()             'Check servers have moved and update accordingly
+
+ 'Global menu object selects
+ set id_general   = general_form.id_general_select       'General - common menu obj
+ set id_apache    = apache_form.id_apache_select         'Apache menu object
+ set id_mysql     = mysql_form.id_mysql_select           'MySQL menu object
+ set id_php       = php_form.id_php_select               'PHP menu object
+ set id_msmpt     = msmpt_form.id_msmpt_select           'MSMPT menu object
+ set id_cron      = cron_form.id_cron_select             'Cron menu object
+ set id_dtdns     = dtdns_form.id_dtdns_select           'DtDNS menu object
+ set id_db_backup = db_backup_form.id_db_backup_select   'DB Backup menu object 
+ set id_perl      = perl_form.id_perl_select             'Perl menu object
+
+ populate_menus() 'Add items to menu
+
+End sub
+
+'=== Populate menus ===========================================================
+Function populate_menus()
+
+  '--General
+  call us_select_add_item(id_general ,"m1",lang_m1_general)            'General
+  call us_select_add_item(id_general ,"m20",lang_m20_general_spacer)   '-----
+  call us_select_add_item(id_general ,"m2",lang_m2_general)            'Change ports
+  call us_select_add_item(id_general ,"m20",lang_m20_general_spacer)   '-----
+  call us_select_add_item(id_general ,"m3",lang_m3_general)            'Clear Server Log Files
+  call us_select_add_item(id_general ,"m20",lang_m20_general_spacer)   '-----
+  call us_select_add_item(id_general ,"m4",lang_m4_general_www)        'Root www - Change passwords and access
+  call us_select_add_item(id_general ,"m5",lang_m5_general_ssl)        'Root ssl - Change passwords and access
+  call us_select_add_item(id_general ,"m6",lang_m6_general_phpmyadmin) 'Root phpMyAdmin - Change access type
+  call us_select_add_item(id_general ,"m20",lang_m20_general_spacer)   '-----
+
+  '--Apache
+  call us_select_add_item(id_apache ,"m1",lang_m1_apache)          'Apache
+  call us_select_add_item(id_apache ,"m20",lang_m20_apache_spacer) '---
+  call us_select_add_item(id_apache ,"m2",lang_m2_apache)          'Edit Basic Configuration
+  call us_select_add_item(id_apache ,"m20",lang_m20_apache_spacer) '---
+  call us_select_add_item(id_apache ,"m3",lang_m3_apache)          'Edit httpd.conf
+  call us_select_add_item(id_apache ,"m4",lang_m4_apache)          'Edit ssl.conf
+  call us_select_add_item(id_apache ,"m20",lang_m20_apache_spacer) '---
+
+  call us_select_add_item(id_apache ,"m5",lang_m5_apache)          'View Error log file error.log
+  call us_select_add_item(id_apache ,"m6",lang_m6_apache)          'View Access log file access.log
+  call us_select_add_item(id_apache ,"m7",lang_m7_apache)          'View SSL Error log file error.lo
+  call us_select_add_item(id_apache ,"m8",lang_m8_apache)          'View SSL Access log file access.log
+
+  call us_select_add_item(id_apache ,"m20",lang_m20_apache_spacer) '---
+  call us_select_add_item(id_apache ,"m9",lang_m9_apache)          'Generate Certificate
+  call us_select_add_item(id_apache ,"m20",lang_m20_apache_spacer) '---
+  call us_select_add_item(id_apache ,"m10",lang_m10_apache)        'Apache Vhosts
+  call us_select_add_item(id_apache ,"m20",lang_m20_apache_spacer) '---
+  call us_select_add_item(id_apache ,"m12",lang_m12_apache)        'Apache Status
+  call us_select_add_item(id_apache ,"m13",lang_m13_apache)        'Apache Info
+  call us_select_add_item(id_apache ,"m20",lang_m20_apache_spacer) '---
+  call us_select_add_item(id_apache ,"m14",lang_m14_apache)        'Apache Modules Enable/Disable
+  call us_select_add_item(id_apache ,"m20",lang_m20_apache_spacer) '---
+
+
+ '--MySQL
+  call us_select_add_item(id_mysql ,"m1",lang_m1_mysql)        'MySQL
+  call us_select_add_item(id_mysql ,"m20",lang_m20_mysql_spacer) '---
+  call us_select_add_item(id_mysql ,"m2",lang_m2_mysql)        'Change Password
+  call us_select_add_item(id_mysql ,"m3",lang_m3_mysql)        'Restore Password
+  call us_select_add_item(id_mysql ,"m20",lang_m20_mysql_spacer) '---
+  call us_select_add_item(id_mysql ,"m4",lang_m4_mysql)        'Edit my.ini
+  call us_select_add_item(id_mysql ,"m5",lang_m5_mysql)        'View Error log file mysql.err
+  call us_select_add_item(id_mysql ,"m20",lang_m20_mysql_spacer) '---
+  call us_select_add_item(id_mysql ,"m6",lang_m6_mysql)        'Create delete Database
+  call us_select_add_item(id_mysql ,"m20",lang_m20_mysql_spacer) '---
+  call us_select_add_item(id_mysql ,"m7",lang_m7_mysql)        'Create restricted MySQL User
+  call us_select_add_item(id_mysql ,"m8",lang_m8_mysql)        'Edit restricted MySQL User
+  call us_select_add_item(id_mysql ,"m20",lang_m20_mysql_spacer) '---
+  call us_select_add_item(id_mysql ,"m9",lang_m9_mysql)        'InnoDB Enable/Disable
+  call us_select_add_item(id_mysql ,"m20",lang_m20_mysql_spacer) '---
+ '--PHP
+  call us_select_add_item(id_php ,"m1",lang_m1_php)        'PHP
+  call us_select_add_item(id_php ,"m20",lang_m20_php_spacer) '---
+  call us_select_add_item(id_php ,"m2",lang_m2_php)        'Edit Basic Configuration
+  call us_select_add_item(id_php ,"m20",lang_m20_php_spacer) '---
+  call us_select_add_item(id_php ,"m3",lang_m3_php)        'Edit Current Configuration file: php.ini
+  call us_select_add_item(id_php ,"m4",lang_m4_php)        'Edit Production Configuration file: php_production.ini
+  call us_select_add_item(id_php ,"m5",lang_m5_php)        'Edit Development Configuration file: php_development.ini
+  call us_select_add_item(id_php ,"m6",lang_m6_php)        'Edit Command Line Configuration file: php-cli.ini
+  call us_select_add_item(id_php ,"m20",lang_m20_php_spacer) '---
+  call us_select_add_item(id_php ,"m7",lang_m7_php)        'Switch to Development Configuration file
+  call us_select_add_item(id_php ,"m8",lang_m8_php)        'Switch to Production Configuration file
+  call us_select_add_item(id_php ,"m20",lang_m20_php_spacer) '---
+  call us_select_add_item(id_php ,"m10",lang_m10_php)        'PHP Accelerators
+  call us_select_add_item(id_php ,"m20",lang_m20_php_spacer) '---
+  call us_select_add_item(id_php ,"m11",lang_m11_php)        'Pear control panel
+  call us_select_add_item(id_php ,"m20",lang_m20_php_spacer) '---
+  call us_select_add_item(id_php ,"m12",lang_m12_php)        'PHP Extensions Enable/Disable
+  call us_select_add_item(id_php ,"m20",lang_m20_php_spacer) '---
+
+ '--MSMPT
+  call us_select_add_item(id_msmpt ,"m1",lang_m1_msmpt)        'MSMPT mail client
+  call us_select_add_item(id_msmpt ,"m20",lang_m20_msmpt_spacer) '---
+  call us_select_add_item(id_msmpt ,"m2",lang_m2_msmpt)        'Edit MSMPT Configuration
+  call us_select_add_item(id_msmpt ,"m3",lang_m3_msmpt)        'Default Account
+  call us_select_add_item(id_msmpt ,"m20",lang_m20_msmpt_spacer) '---
+  call us_select_add_item(id_msmpt ,"m4",lang_m4_msmpt)        'View Log
+  call us_select_add_item(id_msmpt ,"m20",lang_m20_msmpt_spacer) '---
+  call us_select_add_item(id_msmpt ,"m5",lang_m5_msmpt)        'Send Test E-Mail
+  call us_select_add_item(id_msmpt ,"m20",lang_m20_msmpt_spacer) '---
+
+'---CRON
+  call us_select_add_item(id_cron ,"m1",lang_m1_cron)        'CRON
+  call us_select_add_item(id_cron ,"m20",lang_m20_cron_spacer) '---
+  call us_select_add_item(id_cron ,"m2",lang_m2_cron)        'Edit Cron Configuration
+  call us_select_add_item(id_cron ,"m20",lang_m20_cron_spacer) '---
+  call us_select_add_item(id_cron ,"m3",lang_m3_cron)        'Cron Controller
+  call us_select_add_item(id_cron ,"m20",lang_m20_cron_spacer) '---
+  call us_select_add_item(id_cron ,"m4",lang_m4_cron)        'View Log
+  call us_select_add_item(id_cron ,"m20",lang_m20_cron_spacer) '---
+
+'---DtDNS
+  call us_select_add_item(id_dtdns ,"m1",lang_m1_dtdns)        'DtDNS
+  call us_select_add_item(id_dtdns ,"m20",lang_m20_dtdns_spacer) '---
+  call us_select_add_item(id_dtdns ,"m2",lang_m2_dtdns)        'Edit DtDNS Accounts
+  call us_select_add_item(id_dtdns ,"m3",lang_m3_dtdns)        'Force DtDNS UpDATE
+  call us_select_add_item(id_dtdns ,"m20",lang_m20_dtdns_spacer) '---
+  call us_select_add_item(id_dtdns ,"m4",lang_m4_dtdns)        'Enable Log
+  call us_select_add_item(id_dtdns ,"m5",lang_m5_dtdns)        'View Log
+  call us_select_add_item(id_dtdns ,"m20",lang_m20_dtdns_spacer) '---
+  call us_select_add_item(id_dtdns ,"m6",lang_m6_dtdns)        'Enable in CRON
+  call us_select_add_item(id_dtdns ,"m20",lang_m20_dtdns_spacer) '---
+
+'---Db Backup
+  call us_select_add_item(id_db_backup ,"m1",lang_m1_db_backup)        'DB Backup
+  call us_select_add_item(id_db_backup ,"m20",lang_m20_db_backup_spacer) '---
+  call us_select_add_item(id_db_backup ,"m2",lang_m2_db_backup)        'Edit DB Backup
+  call us_select_add_item(id_db_backup ,"m3",lang_m3_db_backup)        'Force DB  Backup
+  call us_select_add_item(id_db_backup ,"m20",lang_m20_db_backup_spacer) '---
+  call us_select_add_item(id_db_backup ,"m4",lang_m4_db_backup)        'Enable log
+  call us_select_add_item(id_db_backup ,"m5",lang_m5_db_backup)        'View Log
+  call us_select_add_item(id_db_backup ,"m20",lang_m20_db_backup_spacer) '---
+  call us_select_add_item(id_db_backup ,"m6",lang_m6_db_backup)        'Enable In Cron
+  call us_select_add_item(id_db_backup ,"m20",lang_m20_db_backup_spacer) '---
+  call us_select_add_item(id_db_backup ,"m7",lang_m7_db_backup)        'Select DBs to backup
+  call us_select_add_item(id_db_backup ,"m8",lang_m8_db_backup)        'Restore DBs from backup
+  call us_select_add_item(id_db_backup ,"m20",lang_m20_db_backup_spacer) '---
+
+'---Perl
+  call us_select_add_item(id_perl ,"m1",lang_m1_perl)        'PERL
+  call us_select_add_item(id_perl ,"m20",lang_m20_perl_spacer) '---
+  call us_select_add_item(id_perl ,"m2",lang_m2_perl)        'Perl control panel
+  call us_select_add_item(id_perl ,"m20",lang_m20_perl_spacer) '---
+
+End Function
+'======================================================= End Populate menus ===
+
+'=== General ==================================================================
+Function f_general()
+ Dim selected
+
+ id_general.blur                   'Remove focus 
+ selected = id_general.value       'Get value selected by user
+ id_general.value ="m1"            'Re-set initial value displayed to user
+
+ Select Case selected              'Decide what to do
+ Case "m1"  '---General
+ 
+ Case "m2"  '---Change ports
+  call setTimeout("general_m2", 50, "vbscript") 'Delay - allows menu-drop to close
+
+ Case "m3"  '---Clear Server Log Files
+  call setTimeout("general_m3", 50, "vbscript")
+
+ Case "m4"  '---Root www - Change passwords and access
+  call setTimeout("general_m4", 50, "vbscript")
+
+ Case "m5"  '---Root ssl - Change passwords and access
+  call setTimeout("general_m5", 50, "vbscript")
+
+ Case "m6"  '---Root phpMyAdmin - Change access type
+  call setTimeout("general_m6", 50, "vbscript")
+
+ Case Else
+   parent.frames("RightContent").location.href = "splash_page.html"
+ End Select
+
+End Function
+'-------------------------------------------------------------- End General ---
+'**Used in above function to prevent menu remaining open while new page loads**
+Function general_m2()
+  parent.frames("RightContent").location.href = "change_server_ports.html"
+End Function
+
+Function general_m3()
+  objShell.Run (US_UNI_CON & "\scripts\Log_files_clear.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function general_m4()
+  objShell.Run (US_UNI_CON & "\scripts\root_www_pass_access.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function general_m5()
+  objShell.Run (US_UNI_CON & "\scripts\root_ssl_pass_access.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function general_m6()
+  objShell.Run (US_UNI_CON & "\scripts\root_phpmyadmin_pass_access.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+'=== Apache ===================================================================
+Function f_apache()
+ Dim selected
+
+ id_apache.blur                   'Remove focus 
+ selected = id_apache.value       'Get value selected by user
+ id_apache.value ="m1"            'Re-set initial value displayed to user
+
+ Select Case selected             'Decide what to do
+ Case "m1"
+  MsgBox "m1"
+
+ Case "m2"  '---Edit Basic Configuration
+     call setTimeout("apache_m2", 50, "vbscript") 'Delay - allows menu-drop to close
+
+ Case "m3"  '---Edit httpd.conf
+   call setTimeout("apache_m3", 50, "vbscript") 
+ 
+ Case "m4"  '---Edit ssl.conf
+   call setTimeout("apache_m4", 50, "vbscript") 
+
+ Case "m5"  '---View Error log file error.log
+   call setTimeout("apache_m5", 50, "vbscript") 
+
+ Case "m6"  '---View Access log file access.log
+   call setTimeout("apache_m6", 50, "vbscript") 
+
+ Case "m7"  '---View SSL Error log file error.log
+   call setTimeout("apache_m7", 50, "vbscript") 
+
+ Case "m8"  '---View SSL Access log file access.log
+   call setTimeout("apache_m8", 50, "vbscript") 
+
+ Case "m9"  '---Generate Certificate
+   call setTimeout("apache_m9", 50, "vbscript") 
+
+ Case "m10"  '---Apache Vhosts
+   call setTimeout("apache_m10", 50, "vbscript") 
+
+ Case "m12"  '---Apache Server Status
+   call setTimeout("apache_m12", 50, "vbscript") 
+
+ Case "m13"  '---Apache Server Info
+   call setTimeout("apache_m13", 50, "vbscript") 
+
+ Case "m14"  '---Apache Modules Enable/Disable
+   call setTimeout("apache_m14", 50, "vbscript") 
+
+ Case Else
+     parent.frames("RightContent").location.href = "splash_page.html"
+ End Select
+
+End Function
+'--------------------------------------------------------------- End Apache ---
+'**Used in above function to prevent menu remaining open while new page loads**
+Function apache_m2()
+  objShell.Run (US_UNI_CON & "\scripts\Basic_apache_configuration.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m3()
+  objShell.Run("notepad " & USF_APACHE_CNF)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m4()
+  objShell.Run("notepad " & USF_APACHE_SSL_CNF)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m5()
+  objShell.Run("notepad " & USF_APACHE_ERROR_LOG)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m6()
+  objShell.Run("notepad " & USF_APACHE_ACCESS_LOG)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m7()
+  objShell.Run("notepad " & USF_APACHE_SSL_ERROR_LOG)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m8()
+  objShell.Run("notepad " & USF_APACHE_SSL_ACCESS_LOG)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m9()
+  objShell.Run (US_UNI_CON & "\scripts\Key_cert_gen.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m10()
+  objShell.Run (US_UNI_CON & "\scripts\Vhosts.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m12()
+  us_redirect("server-status")      'View in browser
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m13()
+  us_redirect("server-info")      'View in browser
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function apache_m14()
+  objShell.Run (US_UNI_CON & "\scripts\Apache_modules.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+'==============================================================================
+Function f_mysql()
+
+ Dim selected
+
+ id_mysql.blur                    'Remove focus 
+ selected = id_mysql.value        'Get value selected by user
+ id_mysql.value ="m1"             'Re-set initial value displayed to user
+
+ Select Case selected             'Decide what to do
+ Case "m1" '---MySQL
+
+ Case "m2" '---Change Password
+  call setTimeout("mysql_m2", 50, "vbscript") 'Delay - allows menu-drop to close
+
+ Case "m3" '---Restore Password
+  call setTimeout("mysql_m3", 50, "vbscript")
+
+ Case "m4" '---Edit my.ini
+  call setTimeout("mysql_m4", 50, "vbscript")
+
+ Case "m5" '---View Error log file mysql.err
+  call setTimeout("mysql_m5", 50, "vbscript")
+
+ Case "m6" '---Create delete Database
+  call setTimeout("mysql_m6", 50, "vbscript")
+
+ Case "m7" '---Create Restricted MySQL User
+  call setTimeout("mysql_m7", 50, "vbscript")
+
+ Case "m8" '---Edit Restricted MySQL User
+  call setTimeout("mysql_m8", 50, "vbscript")
+
+ Case "m9" '---InnoDB Enable/Disable
+  call setTimeout("mysql_m9", 50, "vbscript")
+
+ Case Else
+     parent.frames("RightContent").location.href = "splash_page.html"
+ End Select
+
+End Function
+'------------------------------------------------------------------------------
+'**Used in above function to prevent menu remaining open while new page loads**
+
+Function mysql_m2()
+  objShell.Run (US_UNI_CON & "\scripts\Set_new_mysql_password.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function mysql_m3()
+   objShell.Run (US_UNI_CON & "\scripts\Restore_mysql_password.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function mysql_m4()
+  objShell.Run("notepad " & USF_MYSQL_INI)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function mysql_m5()
+  objShell.Run("notepad " & USF_MYSQL_ERROR_LOG)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function mysql_m6()
+  objShell.Run (US_UNI_CON & "\scripts\Create_delete_database.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function mysql_m7()
+  objShell.Run (US_UNI_CON & "\scripts\Create_restricted_mysql_user.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function mysql_m8()
+  objShell.Run (US_UNI_CON & "\scripts\Edit_restricted_mysql_user.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function mysql_m9() 'InnoDB Enable/Disable
+  parent.frames("RightContent").location.href = "mysql_innodb.html"
+End Function
+
+'==============================================================================
+Function f_php()
+
+ Dim selected
+
+ id_php.blur                    'Remove focus 
+ selected = id_php.value        'Get value selected by user
+ id_php.value ="m1"             'Re-set initial value displayed to user
+ Set objShell = CreateObject("WScript.Shell")
+
+ Select Case selected           'Decide what to do
+ Case "m1" '---PHP
+
+ Case "m2" '---Edit Basic Configuration
+  call setTimeout("php_m2", 50, "vbscript") 'Delay - allows menu-drop to close
+
+ Case "m3" '---Edit Current Configuration file: php.ini
+   call setTimeout("php_m3", 50, "vbscript") 
+
+ Case "m4" '---Edit Production Configuration file: php_production.ini
+    call setTimeout("php_m4", 50, "vbscript") 
+
+ Case "m5" '---Edit Development Configuration file: php_development.ini
+    call setTimeout("php_m5", 50, "vbscript") 
+
+ Case "m6" '---Edit Command Line Configuration file: php-cli.ini
+    call setTimeout("php_m6", 50, "vbscript") 
+
+ Case "m7" '---Switch to Development Configuration file
+    call setTimeout("php_m7", 50, "vbscript") 
+
+ Case "m8" '---Switch to Production Configuration file
+   call setTimeout("php_m8", 50, "vbscript") 
+
+ Case "m10" '---PHP Accelerators
+   call setTimeout("php_m10", 50, "vbscript")
+
+ Case "m11" '---Pear control panel
+   call setTimeout("php_m11", 50, "vbscript")
+
+ Case "m12" '---PHP Extensions Enable/Disable
+   call setTimeout("php_m12", 50, "vbscript")
+
+ Case Else
+     parent.frames("RightContent").location.href = "splash_page.html"
+ End Select
+
+
+End Function
+'------------------------------------------------------------------------------
+'**Used in above function to prevent menu remaining open while new page loads**
+Function php_m2()
+  objShell.Run (US_UNI_CON & "\scripts\Basic_php_configuration.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function php_m3()
+  objShell.Run("notepad " & USF_PHP_INI)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function php_m4()
+  objShell.Run("notepad " & USF_PHP_INI_PROD)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function php_m5()
+  objShell.Run("notepad " & USF_PHP_INI_DEV)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function php_m6()
+  objShell.Run("notepad " & USF_PHP_INI_CLI)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function php_m7()
+  us_php_switch_to_development()
+  MsgBox lang_php_switched_to_development,,lang_php_switching_title
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function php_m8()
+  us_php_switch_to_production()
+  MsgBox lang_php_switched_to_production,,lang_php_switching_title
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function php_m10()
+  parent.frames("RightContent").location.href = "php_accelerators.html"
+End Function
+
+Function php_m11() 'Pear control panel
+  parent.frames("RightContent").location.href = "pear_setup_front_end.html"
+End Function
+
+Function php_m12() 'PHP Extensions Enable/Disable
+  objShell.Run (US_UNI_CON & "\scripts\PHP_extensions.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+'==============================================================================
+Function f_msmpt()
+
+ id_msmpt.blur                    'Remove focus 
+ selected = id_msmpt.value        'Get value selected by user
+ id_msmpt.value ="m1"             'Re-set initial value displayed to user
+
+ Select Case selected           'Decide what to do
+ Case "m1" '---MSMPT mail client
+
+ Case "m2" '---Edit MSMPT Configuration
+    call setTimeout("msmpt_m2", 50, "vbscript") 'Delay - allows menu-drop to close
+
+ Case "m3" '---Default Account
+   call setTimeout("msmpt_m3", 50, "vbscript") 
+
+ Case "m4" '---View Log
+    call setTimeout("msmpt_m4", 50, "vbscript")  
+
+ Case "m5" '---Send Test Mail
+   call setTimeout("msmpt_m5", 50, "vbscript")  
+
+ Case Else
+     parent.frames("RightContent").location.href = "splash_page.html"
+ End Select
+
+End Function
+'------------------------------------------------------------------------------
+'**Used in above function to prevent menu remaining open while new page loads**
+Function msmpt_m2()
+  objShell.Run("notepad " & USF_MSMTP_INI)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function msmpt_m3()
+  parent.frames("RightContent").location.href = "MSMPT_setup_test.html"
+End Function
+
+Function msmpt_m4()
+  objShell.Run("notepad " & USF_MSMTP_LOG)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function msmpt_m5()
+  parent.frames("RightContent").location.href = "MSMPT_setup_test.html"
+End Function
+
+'==============================================================================
+Function f_cron()
+
+ id_cron.blur                    'Remove focus 
+ selected = id_cron.value        'Get value selected by user
+ id_cron.value ="m1"             'Re-set initial value displayed to user
+
+ Select Case selected           'Decide what to do
+ Case "m1" '---CRON
+
+ Case "m2" '---Edit CRON Configuration
+   call setTimeout("cron_m2", 50, "vbscript") 'Delay - allows menu-drop to close
+
+ Case "m3" '---Cron Controller
+   call setTimeout("cron_m3", 50, "vbscript") 
+
+ Case "m4" '---View Log
+    call setTimeout("cron_m4", 50, "vbscript")
+
+ Case Else
+     parent.frames("RightContent").location.href = "splash_page.html"
+ End Select
+
+End Function
+'------------------------------------------------------------------------------
+'**Used in above function to prevent menu remaining open while new page loads**
+Function cron_m2()
+   objShell.Run("notepad " & USF_CRON_INI)
+   parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function cron_m3()
+  parent.frames("RightContent").location.href = "cron_program_service.html"
+End Function
+
+Function cron_m4()
+  objShell.Run("notepad " & USF_CRON_LOG)
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+'==============================================================================
+Function f_dtdns()
+
+ id_dtdns.blur                    'Remove focus 
+ selected = id_dtdns.value        'Get value selected by user
+ id_dtdns.value ="m1"             'Re-set initial value displayed to user
+ Set objShell = CreateObject("WScript.Shell")
+
+ Select Case selected           'Decide what to do
+ Case "m1" '---DtDNS
+
+ Case "m2" '---Edit DtDNS Accounts
+   call setTimeout("dtdns_m2", 50, "vbscript") 'Delay - allows menu-drop to close  
+
+ Case "m3" '---Force DtDNS UpDATE
+   call setTimeout("dtdns_m3", 50, "vbscript")   
+
+ Case "m4" '---Enable Log
+   call setTimeout("dtdns_m4", 50, "vbscript")   
+
+ Case "m5" '---View Log
+   call setTimeout("dtdns_m5", 50, "vbscript")   
+
+ Case "m6" '---Enable in CRON
+   call setTimeout("dtdns_m6", 50, "vbscript")   
+
+ Case Else
+     parent.frames("RightContent").location.href = "splash_page.html"
+ End Select
+
+End Function
+'------------------------------------------------------------------------------
+'**Used in above function to prevent menu remaining open while new page loads**
+Function dtdns_m2()
+  objShell.Run("notepad " & USF_DTDNS_INI)
+  parent.frames("RightContent").location.href = "splash_page.html" 
+End Function
+
+Function dtdns_m3()
+ 
+ 'Run Script dtdns_updater.vbs
+  objShell.Run USF_PHP_EXE & " -c " & USF_PHP_INI_CLI & " " & USF_DTDNS_SCRIPT,0   'run PHP Script file detached hidden
+  parent.frames("RightContent").location.href = "splash_page.html"
+  MsgBox  lang_dtdns_popup_str,,lang_dtdns_popup_title
+
+End Function
+
+Function dtdns_m4()
+  objShell.Run("notepad " & USF_DTDNS_SCRIPT)
+  parent.frames("RightContent").location.href = "splash_page.html" 
+End Function
+
+Function dtdns_m5()
+  objShell.Run("notepad " & USF_DTDNS_LOG)
+  parent.frames("RightContent").location.href = "splash_page.html" 
+End Function
+
+Function dtdns_m6()
+   objShell.Run("notepad " & USF_CRON_INI)
+   parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+'==============================================================================
+Function f_db_backup()
+
+ id_db_backup.blur                    'Remove focus 
+ selected = id_db_backup.value        'Get value selected by user
+ id_db_backup.value ="m1"             'Re-set initial value displayed to user
+ Set objShell = CreateObject("WScript.Shell")
+
+ Select Case selected           'Decide what to do
+ Case "m1" '---DB Backup
+
+ Case "m2" '---Edit DB Backup Config
+   call setTimeout("db_backup_m2", 50, "vbscript") 'Delay - allows menu-drop to close  
+
+ Case "m3" '---Force DB  Backup
+   call setTimeout("db_backup_m3", 50, "vbscript")   
+
+ Case "m4" '---Enable log
+   call setTimeout("db_backup_m4", 50, "vbscript")   
+
+ Case "m5" '---View Log
+   call setTimeout("db_backup_m5", 50, "vbscript")   
+
+ Case "m6" '---Enable In Cron
+   call setTimeout("db_backup_m6", 50, "vbscript")   
+
+ Case "m7" '---Select DBs to backup
+   call setTimeout("db_backup_m7", 50, "vbscript")   
+
+ Case "m8" '---Restore DBs from backup
+   call setTimeout("db_backup_m8", 50, "vbscript")   
+
+
+ Case Else
+     parent.frames("RightContent").location.href = "splash_page.html"
+ End Select
+
+End Function
+'------------------------------------------------------------------------------
+Function db_backup_m2()
+  objShell.Run("notepad " & USF_DBBACKUP_INI)
+  parent.frames("RightContent").location.href = "splash_page.html" 
+End Function
+
+Function db_backup_m3()
+  objShell.Run (USF_DBBACKUP_SCRIPT)          'Run Script db_backup.vbs
+  parent.frames("RightContent").location.href = "splash_page.html"
+  MsgBox  lang_dbbackup_popup_str,,lang_dbbackup_popup_title
+End Function
+
+Function db_backup_m4()
+  objShell.Run("notepad " & USF_DBBACKUP_INI)
+  parent.frames("RightContent").location.href = "splash_page.html" 
+End Function
+
+Function db_backup_m5()
+  objShell.Run("notepad " & USF_DBBACKUP_LOG )
+  parent.frames("RightContent").location.href = "splash_page.html" 
+End Function
+
+Function db_backup_m6()
+   objShell.Run("notepad " & USF_CRON_INI)
+   parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function db_backup_m7()
+  objShell.Run (US_UNI_CON & "\scripts\Select_databases_to_backup.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+Function db_backup_m8()
+  objShell.Run (US_UNI_CON & "\scripts\Restore_databases_from_backup.hta")
+  parent.frames("RightContent").location.href = "splash_page.html"
+End Function
+
+'==============================================================================
+Function f_perl()
+
+ id_perl.blur                    'Remove focus 
+ selected = id_perl.value        'Get value selected by user
+ id_perl.value ="m1"             'Re-set initial value displayed to user
+ Set objShell = CreateObject("WScript.Shell")
+
+ Select Case selected           'Decide what to do
+ Case "m1" '---PERL
+
+ Case "m2" '---Perl control panel
+   call setTimeout("perl_m2", 50, "vbscript") 'Delay - allows menu-drop to close  
+
+ Case Else
+     parent.frames("RightContent").location.href = "splash_page.html"
+ End Select
+
+End Function
+'------------------------------------------------------------------------------
+Function perl_m2()
+  parent.frames("RightContent").location.href = "perl_setup_test.html"
+End Function
+
+'==END
+</script>
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<style type="text/css">
+/*****************************************/
+body{
+ margin:0px;
+ background : #C3C3EC
+}
+
+div.hr {
+  width: 100%;
+  height: 1px;
+  margin: 1px;
+  margin-left:8px;
+  margin-right:8px;
+  background: #333333;
+  line-height: 1px;
+  font-size: 1px; 
+}
+/*****************************************/
+</style>
+</head>
+
+<body>
+
+<table width="100%" border="0">
+
+<tr><td>
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+ <form id="general_form">
+ <select class="select_dd" onchange="f_general()" id="id_general_select" ></select>
+ </form>
+</div>
+</td></tr>
+
+<tr><td><div class="hr">&nbsp;</div></td></tr>
+
+<tr><td>
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+ <form id="apache_form">
+ <select class="select_dd" onchange="f_apache()" id="id_apache_select" ></select>
+ </form>
+</div>
+</td></tr>
+
+<tr><td>
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+ <form id="mysql_form">
+ <select class="select_dd" onchange="f_mysql()" id="id_mysql_select" ></select>
+ </form>
+</div>
+</td></tr>
+
+<tr><td>
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+ <form id="php_form">
+ <select class="select_dd" onchange="f_php()" id="id_php_select" ></select>
+ </form>
+</div>
+</td></tr>
+
+<tr><td><div class="hr">&nbsp;</div></td></tr>
+
+<tr><td>
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+ <form id="msmpt_form">
+ <select class="select_dd" onchange="f_msmpt()" id="id_msmpt_select" ></select>
+ </form>
+</div>
+</td></tr>
+
+<tr><td>
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+ <form id="cron_form">
+ <select class="select_dd" onchange="f_cron()" id="id_cron_select" ></select>
+ </form>
+</div>
+</td></tr>
+
+<tr><td>
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+ <form id="dtdns_form">
+ <select class="select_dd" onchange="f_dtdns()" id="id_dtdns_select" ></select>
+ </form>
+</div>
+</td></tr>
+
+<tr><td>
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+ <form id="db_backup_form">
+ <select class="select_dd" onchange="f_db_backup()" id="id_db_backup_select" ></select>
+ </form>
+</div>
+</td></tr>
+
+<tr><td><div class="hr">&nbsp;</div></td></tr>
+
+<tr><td>
+<div class="wrapper" onmouseover="javascript:this.style.border='1px solid #0000ee';" onmouseout="javascript:this.style.border='1px solid #000000';" >
+ <form id="perl_form">
+ <select class="select_dd" onchange="f_perl()" id="id_perl_select" ></select>
+ </form>
+</div>
+</td></tr>
+
+</table>
+
+
+</body>
+</html>

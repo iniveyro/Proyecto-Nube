@@ -1,0 +1,168 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>Untitled Document</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+<script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+<script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+'Globals
+Dim old_apache_port,old_apache_ssl_port,old_mysql_port
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+ us_init()             'Check servers have moved and update accordingly
+
+ '--Set legend text
+ legi_cron_program.InnerHtml     = lang_cron_program_legend  'Run Cron as a program
+ legi_cron_service.InnerHtml     = lang_cron_service_legend  'Run Cron as a service
+
+ '--Set button text
+ bi_start_cron_program.value     = lang_cron_program_start          'Start
+ bi_stop_cron_program.value      = lang_cron_program_stop           'Stop
+ bi_start_cron_service.value     = lang_cron_service_install_run    'Install Run Service
+ bi_stop_cron_service.value      = lang_cron_service_stop_uninstall 'Stop Uninstall Service
+
+ set_button_status() 'Set initial button status
+End sub
+'------------------------------------------------------------------------------
+
+'=== Set button status ========================================================
+Function set_button_status()
+ '--Check installed as service
+ If us_is_cron_installed_as_a_service() Then   'Is cron installed as a service
+   bi_start_cron_program.Disabled   = True     'Yes: Disable button 
+   bi_stop_cron_program.Disabled    = True     'Disable button
+   bi_start_cron_service.Disabled   = True     'Disable button
+   bi_stop_cron_service.Disabled    = False    'Enable button
+
+ Else                                          'No: Program
+   If  us_get_cron_tracker() = "run" Then
+     bi_start_cron_program.Disabled   = True   'Disable button 
+     bi_stop_cron_program.Disabled    = False  'Enable button
+     bi_start_cron_service.Disabled   = True   'Disable button
+     bi_stop_cron_service.Disabled    = True   'Enable button
+   Else
+     If us_apache_running() Then
+       bi_start_cron_program.Disabled   = False  'Enable button
+     Else
+        bi_start_cron_program.Disabled  = True  'Disable button
+    End If
+     bi_stop_cron_program.Disabled    = True   'Disable button
+     bi_start_cron_service.Disabled   = False  'Enable button
+     bi_stop_cron_service.Disabled    = True   'Disable button
+   End If  
+ End If
+End Function
+'==================================================== End set button status ===
+
+'=== Disable all buttons =======================================================
+Function disable_all_butons()
+   bi_start_cron_program.Disabled   = True   'Disable button 
+   bi_stop_cron_program.Disabled    = True   'Disable button
+   bi_start_cron_service.Disabled   = True   'Disable button
+   bi_stop_cron_service.Disabled    = True   'Disable button
+End Function
+'================================================== End Disable all buttons ===
+
+'=== Start Cron as a program ==================================================
+Function btf_start_cron_program()
+  bi_start_cron_program.blur                  'Remove focus
+  disable_all_butons()                        'Prevent user clicking a button
+
+  Set objShell = CreateObject("WScript.Shell")'Create shell ready to run scripts
+  objShell.Run USF_CRON_SCRIPT,0              'run run_cron.vbs detached hidden
+
+  us_hta_delay("2000")                        'Wait 2s for script to run
+  set_button_status()                         'Real time button update
+
+End Function
+'============================================== End Start Cron as a program ===
+
+'=== Stop Cron as a program ===================================================
+Function btf_stop_cron_program()
+  bi_stop_cron_program.blur                     'Remove focus
+  disable_all_butons()                          'Prevent user clicking a button
+
+  Set objShell = CreateObject("WScript.Shell")  'Create shell ready to run scripts
+  objShell.Run USF_CRON_SCRIPT_STOP,0           'run stop_cron.vbs detached hidden
+
+  us_hta_delay("2000")                          'Wait 2s for script to run
+  set_button_status()                           'Real time button update
+End Function
+'=============================================== End Stop Cron as a program ===
+
+'=== Start Cron as a service ==================================================
+Function btf_start_cron_service()
+  bi_start_cron_service.blur                    'Remove focus
+  disable_all_butons()                          'Prevent user clicking a button
+
+  Set objShell = CreateObject("WScript.Shell")  'Create shell ready to run scripts
+  objShell.Run USF_CRON_SERVICE_INSTALL_START,0 'run install_start_service.bat detached hidden
+
+  us_hta_delay("2000")                          'Wait 2s for script to run
+  set_button_status()                           'Real time button update
+
+End Function
+'============================================== End Start Cron as a service ===
+
+'=== Stop Cron service ========================================================
+Function btf_stop_cron_service()
+  bi_stop_cron_service.blur                    'Remove focus
+  disable_all_butons()                         'Prevent user clicking a button
+
+  Set objShell = CreateObject("WScript.Shell")   'Create shell ready to run scripts
+  objShell.Run USF_CRON_SERVICE_STOP_UNINSTALL,0 'run stop_uninstall_service.bat detached hidden
+
+  us_hta_delay("4000")                          'Wait 2s for script to run
+  set_button_status()                           'Real time button update
+
+End Function
+'==================================================== End Stop Cron service ===
+
+</script>
+
+<link rel="stylesheet" type="text/css" href="../css/main_style.css" media="screen" />
+<style type="text/css">
+
+input{
+ font-size:11px;
+ font-family:Verdana;
+ width:100px;
+ background-color: #D1D1F5;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<fieldset>
+<legend id="legi_cron_program" >Run Cron as a program</legend> 
+
+<table cellspacing="0" border="0" >
+<tr><td width="50%"><button  id="bi_start_cron_program" onclick="btf_start_cron_program()" >Start</button></td></tr>
+<tr><td><button  id="bi_stop_cron_program" onclick="btf_stop_cron_program()" >Stop</button></td></tr>
+</table>
+
+</fieldset>
+
+<fieldset>
+<legend id="legi_cron_service" >Run Cron as a service</legend> 
+
+<table cellspacing="0" border="0" >
+<tr><td width="50%"><button  id="bi_start_cron_service" onclick="btf_start_cron_service()" >Install Run</button></td></tr>
+<tr><td><button  id="bi_stop_cron_service" onclick="btf_stop_cron_service()" >Stop Uninstall</button></td></tr>
+</table>
+
+</fieldset>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+
+  <script type="text/jscript" >
+  // Resize and hide window. This script requires placing just below head tag.
+  // Note: This js is faster than vbs hence avoids flicker.
+  //       Window is hidden by moving it off screen.  
+
+   var hta_width  = 406;                                // Set Application width
+   var hta_height = 240;                                // Set Application height
+   window.resizeTo(hta_width,hta_height);               // Resize window
+   var hta_left = (window.screen.width-hta_width)/2;    // New position centered
+   var hta_top  = (window.screen.height-hta_height)/2;  // New position centered
+   window.moveTo(-2000,-2000);                          // Hide window! Move off screen
+   setTimeout('show(hta_left+40,hta_top+40)',200);            // Schedule (ms) show function
+
+   function show(hta_left,hta_top) {                    // Show Window by moving 
+      window.moveTo(hta_left,hta_top);                  // it into view.
+   }
+  </script>
+
+  <title>Server - Configuration</title>
+ 
+  <hta:application
+   id='uni_configuration_1'
+   applicationname='uni_configuration_1'
+   border="thin"
+   icon='../images/us.ico'
+   maximizeButton="no"
+   navigable="yes"
+   scroll="no"
+   singleinstance="yes"
+  />
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+  <script type="text/vbscript" src="../includes/core_config_inc.vbs"></script>
+  <script type="text/vbscript" src="../includes/core_functions_inc.vbs"></script>
+  <script type="text/vbscript" src="../lang/lang.vbs"></script>
+
+<script type="text/vbscript">
+ Option Explicit
+
+'******************************************************************************
+'Window_onLoad runs any time the HTA starts up or is refreshed
+'******************************************************************************
+Sub Window_OnLoad
+  us_init()             'Check servers have moved and update accordingly
+End sub
+</script>
+
+<style type="text/css">
+</style>
+
+</head>
+
+ <FRAMESET FRAMEBORDER="0" FRAMESPACING="0" COLS="120,*"  >
+   <FRAME name="NavBar"       MARGINWIDTH="0" MARGINHEIGHT="0" SRC="main_menu.html"    SCROLLING="no" APPLICATION="YES" style="border-right:solid 1px #555555" >
+   <FRAME name="RightContent" MARGINWIDTH="0" MARGINHEIGHT="0" SRC="splash_page.html"  SCROLLING="no" APPLICATION="YES">
+ </FRAMESET>
+
+</html>
+
+
